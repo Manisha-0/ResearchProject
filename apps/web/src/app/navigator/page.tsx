@@ -5,6 +5,7 @@ import { PatientRow } from "@/components/navigator/PatientRow";
 import { PrioritySummary } from "@/components/navigator/PrioritySummary";
 import { computePriority } from "@/lib/scoring";
 import { useCompassStore } from "@/store/compass-store";
+import { AppHeader } from "@/components/app/AppHeader";
 
 export default function NavigatorDashboard() {
   const patients = useCompassStore((state) => state.patients);
@@ -25,6 +26,7 @@ export default function NavigatorDashboard() {
 
   return (
     <main className="min-h-screen bg-surface-soft">
+      <AppHeader currentRole="navigator" showReset />
       <header className="border-b border-border bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
           <div className="flex items-center gap-3">

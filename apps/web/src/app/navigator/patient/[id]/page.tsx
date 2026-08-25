@@ -14,6 +14,7 @@ import {
 
 import { PriorityBadge } from "@/components/navigator/PriorityBadge";
 import { computePriority } from "@/lib/scoring";
+import { AppHeader } from "@/components/app/AppHeader";
 import { buildNavigatorSummary } from "@/lib/summaries";
 import type { CareGap, PriorityReason } from "@/lib/types";
 import { useCompassStore } from "@/store/compass-store";
@@ -58,26 +59,7 @@ export default function PatientDetailPage() {
 
   return (
     <main className="min-h-screen bg-surface-soft">
-      <header className="border-b border-border bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy font-bold text-white">
-              C
-            </div>
-
-            <div>
-              <p className="font-semibold text-navy">Compass</p>
-
-              <p className="text-xs text-ink-soft">Navigator Action Center</p>
-            </div>
-          </div>
-
-          <span className="rounded-full bg-gold-tint px-3 py-1.5 text-xs font-semibold text-navy-deep">
-            Demo · Synthetic Data
-          </span>
-        </div>
-      </header>
-
+      <AppHeader currentRole="navigator" showReset />
       <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
         <Link
           href="/navigator"

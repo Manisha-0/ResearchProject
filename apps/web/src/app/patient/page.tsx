@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { CalendarDays, Car, ChevronRight, MapPin } from "lucide-react";
+import { CalendarDays, Car, MapPin } from "lucide-react";
 import { CheckInForm } from "@/components/patient/CheckInForm";
 import { useCompassStore } from "@/store/compass-store";
+import { AppHeader } from "@/components/app/AppHeader";
 
 export default function PatientPage() {
   const patient = useCompassStore((state) =>
@@ -16,26 +16,7 @@ export default function PatientPage() {
 
   return (
     <main className="min-h-screen bg-surface-soft">
-      <header className="border-b border-border bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy font-bold text-white">
-              C
-            </div>
-
-            <div>
-              <p className="font-semibold text-navy">Compass</p>
-
-              <p className="text-xs text-ink-soft">My care journey</p>
-            </div>
-          </div>
-
-          <span className="rounded-full bg-gold-tint px-3 py-1.5 text-xs font-semibold text-navy-deep">
-            Demo · Synthetic
-          </span>
-        </div>
-      </header>
-
+      <AppHeader currentRole="patient" />
       <div className="mx-auto max-w-3xl px-5 py-8">
         <section>
           <p className="text-sm text-ink-soft">Good afternoon,</p>
@@ -106,14 +87,6 @@ export default function PatientPage() {
             <JourneyItem title="Follow-up" detail="Coming next" />
           </div>
         </section>
-
-        <Link
-          href="/navigator"
-          className="mt-8 flex items-center justify-center gap-2 text-sm font-medium text-navy"
-        >
-          Demo: switch to navigator
-          <ChevronRight className="h-4 w-4" />
-        </Link>
 
         <p className="mt-6 text-center text-xs leading-5 text-ink-soft">
           Prototype uses synthetic patient data. Compass does not provide
