@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
+@theme {
+  /* Compass / Ochsner-inspired brand */
+  --color-navy: #142d50;
+  --color-navy-deep: #0e203a;
+  --color-navy-soft: #28476d;
+  --color-navy-tint: #e7ecf3;
+
+  --color-gold: #f2a900;
+  --color-gold-soft: #f8c65c;
+  --color-gold-tint: #fdf1d9;
+
+  /* Navigation priority colors */
+  --color-priority-high: #b0483c;
+  --color-priority-high-tint: #f5e4e1;
+
+  --color-priority-medium: #c98a2e;
+  --color-priority-medium-tint: #faeedc;
+
+  --color-priority-low: #3f8f5f;
+  --color-priority-low-tint: #e4f1e9;
+
+  /* Neutral UI */
+  --color-ink: #16232b;
+  --color-ink-soft: #4e5b62;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f7f9fb;
+  --color-border: #dce3ea;
+
+  /* Typography */
+  --font-display: Georgia, "Times New Roman", serif;
+  --font-body: Arial, Helvetica, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-surface-soft);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--color-gold-tint);
+  color: var(--color-navy-deep);
 }
