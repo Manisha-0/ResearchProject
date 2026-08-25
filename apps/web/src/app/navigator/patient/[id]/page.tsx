@@ -18,6 +18,7 @@ import { AppHeader } from "@/components/app/AppHeader";
 import { buildNavigatorSummary } from "@/lib/summaries";
 import type { CareGap, PriorityReason } from "@/lib/types";
 import { useCompassStore } from "@/store/compass-store";
+import { CopilotDrawer } from "@/components/navigator/CopilotDrawer";
 
 export default function PatientDetailPage() {
   const params = useParams<{ id: string }>();
@@ -91,7 +92,10 @@ export default function PatientDetailPage() {
               </div>
             </div>
 
-            <PriorityBadge score={priority.score} tier={priority.tier} />
+            <div className="flex flex-wrap items-center gap-3">
+              <PriorityBadge score={priority.score} tier={priority.tier} />
+              <CopilotDrawer patient={patient} />
+            </div>
           </div>
 
           <div className="mt-7 grid gap-4 border-t border-border pt-6 sm:grid-cols-3">

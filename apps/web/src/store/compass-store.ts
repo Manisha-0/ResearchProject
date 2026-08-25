@@ -3,53 +3,62 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { seedPatients } from "@/lib/data";
-import {
-  CareGap,
-  CheckIn,
-  Patient,
-} from "@/lib/types";
+import { caregivers as seedCaregivers, seedPatients } from "@/lib/data";
+
+import type { CareGap, Caregiver, CheckIn, Patient } from "@/lib/types";
 
 type SubmitCheckInInput = {
   nausea: CheckIn["nausea"];
   transportStatus: CheckIn["transportStatus"];
   medicationStatus: CheckIn["medicationStatus"];
   note: string;
+  submittedBy?: CheckIn["submittedBy"];
 };
 
 type CompassStore = {
   patients: Patient[];
-
+  caregivers: Caregiver[];
   getPatient: (patientId: string) => Patient | undefined;
-
-  submitCheckIn: (
-    patientId: string,
-    input: SubmitCheckInInput,
-  ) => void;
-
-  resolveGap: (
-    patientId: string,
-    gapId: string,
-    resolvedBy?: string,
-  ) => void;
-
+  getCaregiver: (caregiverId: string) => Caregiver | undefined;
+  getCaregiversForPatient: (patientId: string) => Caregiver[];
+  submitCheckIn: (patientId: string, input: SubmitCheckInInput) => void;
+  resolveGap: (patientId: string, gapId: string, resolvedBy?: string) => void;
   resetDemo: () => void;
 };
 
 function createId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getInitialPatients(): Patient[] {
+  return structuredClone(seedPatients);
+}
+
+function getInitialCaregivers(): Caregiver[] {
+  return structuredClone(seedCaregivers);
 }
 
 export const useCompassStore = create<CompassStore>()(
   persist(
     (set, get) => ({
-      patients: seedPatients,
+      patients: getInitialPatients(),
+
+      caregivers: getInitialCaregivers(),
 
       getPatient: (patientId) => {
-        return get().patients.find(
-          (patient) => patient.id === patientId,
+        return get().patients.find((patient) => patient.id === patientId);
+      },
+
+      getCaregiver: (caregiverId) => {
+        return get().caregivers.find(
+          (caregiver) => caregiver.id === caregiverId,
+        );
+      },
+
+      getCaregiversForPatient: (patientId) => {
+        return get().caregivers.filter(
+          (caregiver) =>
+            caregiver.patientId === patientId && caregiver.status === "active",
         );
       },
 
@@ -65,42 +74,58 @@ export const useCompassStore = create<CompassStore>()(
             const checkIn: CheckIn = {
               id: createId("checkin"),
               createdAt: now,
-              ...input,
+              nausea: input.nausea,
+              transportStatus: input.transportStatus,
+              medicationStatus: input.medicationStatus,
+              note: input.note,
+              submittedBy: input.submittedBy ?? {
+                id: patient.id,
+                name: `${patient.firstName} ${patient.lastName}`,
+                role: "patient",
+              },
             };
 
-            const careGaps = [...patient.careGaps];
+            let careGaps = [...patient.careGaps];
 
-            const hasOpenTransportGap = careGaps.some(
+            const openTransportGap = careGaps.find(
               (gap) =>
-                gap.type === "transportation" &&
-                gap.status !== "resolved",
+                gap.type === "transportation" && gap.status !== "resolved",
             );
 
-            if (
-              input.transportStatus !== "confirmed" &&
-              !hasOpenTransportGap
-            ) {
-              careGaps.push({
-                id: createId("transport-gap"),
-                type: "transportation",
-                title: "Transportation unresolved",
-                description:
-                  "Transportation is not confirmed for the upcoming treatment.",
-                status: "open",
-                createdAt: now,
+            if (input.transportStatus !== "confirmed") {
+              if (!openTransportGap) {
+                careGaps.push({
+                  id: createId("transport-gap"),
+                  type: "transportation",
+                  title: "Transportation unresolved",
+                  description:
+                    "Transportation is not confirmed for the upcoming treatment.",
+                  status: "open",
+                  createdAt: now,
+                });
+              }
+            }
+
+            if (input.transportStatus === "confirmed" && openTransportGap) {
+              careGaps = careGaps.map((gap) => {
+                if (gap.id !== openTransportGap.id) {
+                  return gap;
+                }
+
+                return {
+                  ...gap,
+                  status: "resolved",
+                  resolvedAt: now,
+                  resolvedBy: checkIn.submittedBy.name,
+                };
               });
             }
 
-            const hasOpenSymptomGap = careGaps.some(
-              (gap) =>
-                gap.type === "symptom" &&
-                gap.status !== "resolved",
+            const openSymptomGap = careGaps.find(
+              (gap) => gap.type === "symptom" && gap.status !== "resolved",
             );
 
-            if (
-              input.nausea === "severe" &&
-              !hasOpenSymptomGap
-            ) {
+            if (input.nausea === "severe" && !openSymptomGap) {
               careGaps.push({
                 id: createId("symptom-gap"),
                 type: "symptom",
@@ -112,15 +137,13 @@ export const useCompassStore = create<CompassStore>()(
               });
             }
 
-            const hasOpenMedicationGap = careGaps.some(
-              (gap) =>
-                gap.type === "medication" &&
-                gap.status !== "resolved",
+            const openMedicationGap = careGaps.find(
+              (gap) => gap.type === "medication" && gap.status !== "resolved",
             );
 
             if (
               input.medicationStatus === "having_trouble" &&
-              !hasOpenMedicationGap
+              !openMedicationGap
             ) {
               careGaps.push({
                 id: createId("medication-gap"),
@@ -135,10 +158,8 @@ export const useCompassStore = create<CompassStore>()(
 
             return {
               ...patient,
-              checkIns: [
-                checkIn,
-                ...patient.checkIns,
-              ],
+              checkIns: [checkIn, ...patient.checkIns],
+
               careGaps,
             };
           }),
@@ -148,7 +169,7 @@ export const useCompassStore = create<CompassStore>()(
       resolveGap: (
         patientId,
         gapId,
-        resolvedBy = "James Wilson",
+        resolvedBy = "James Wilson · Navigator",
       ) => {
         const now = new Date().toISOString();
 
@@ -162,26 +183,26 @@ export const useCompassStore = create<CompassStore>()(
               (gap) => gap.id === gapId,
             );
 
-            const careGaps: CareGap[] =
-              patient.careGaps.map((gap) => {
-                if (gap.id !== gapId) {
-                  return gap;
-                }
+            if (!gapToResolve) {
+              return patient;
+            }
 
-                return {
-                  ...gap,
-                  status: "resolved",
-                  resolvedAt: now,
-                  resolvedBy,
-                };
-              });
+            const careGaps: CareGap[] = patient.careGaps.map((gap) => {
+              if (gap.id !== gapId) {
+                return gap;
+              }
 
-            let checkIns = patient.checkIns;
+              return {
+                ...gap,
+                status: "resolved",
+                resolvedAt: now,
+                resolvedBy,
+              };
+            });
 
-            if (
-              gapToResolve?.type === "transportation" &&
-              checkIns.length > 0
-            ) {
+            let checkIns = [...patient.checkIns];
+
+            if (gapToResolve.type === "transportation" && checkIns.length > 0) {
               checkIns = checkIns.map((checkIn, index) => {
                 if (index !== 0) {
                   return checkIn;
@@ -194,8 +215,14 @@ export const useCompassStore = create<CompassStore>()(
               });
             }
 
+            const baselineTransportStatus =
+              gapToResolve.type === "transportation" && checkIns.length === 0
+                ? "confirmed"
+                : patient.baselineTransportStatus;
+
             return {
               ...patient,
+              baselineTransportStatus,
               careGaps,
               checkIns,
             };
@@ -205,12 +232,18 @@ export const useCompassStore = create<CompassStore>()(
 
       resetDemo: () => {
         set({
-          patients: seedPatients,
+          patients: getInitialPatients(),
+          caregivers: getInitialCaregivers(),
         });
       },
     }),
+
     {
       name: "project-compass-demo",
+      partialize: (state) => ({
+        patients: state.patients,
+        caregivers: state.caregivers,
+      }),
     },
   ),
 );

@@ -1,6 +1,5 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
 import { PatientRow } from "@/components/navigator/PatientRow";
 import { PrioritySummary } from "@/components/navigator/PrioritySummary";
 import { computePriority } from "@/lib/scoring";
@@ -9,8 +8,6 @@ import { AppHeader } from "@/components/app/AppHeader";
 
 export default function NavigatorDashboard() {
   const patients = useCompassStore((state) => state.patients);
-  const resetDemo = useCompassStore((state) => state.resetDemo);
-
   const rankedPatients = [...patients].sort(
     (a, b) => computePriority(b).score - computePriority(a).score,
   );
@@ -27,79 +24,6 @@ export default function NavigatorDashboard() {
   return (
     <main className="min-h-screen bg-surface-soft">
       <AppHeader currentRole="navigator" showReset />
-      <header className="border-b border-border bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-3">
-            <div
-              className="
-                flex
-                h-9
-                w-9
-                items-center
-                justify-center
-                rounded-xl
-                bg-navy
-                text-lg
-                font-bold
-                text-white
-              "
-            >
-              C
-            </div>
-
-            <div>
-              <div className="font-semibold text-navy">Compass</div>
-
-              <div className="text-xs text-ink-soft">
-                Cancer care navigation
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span
-              className="
-                hidden
-                rounded-full
-                bg-gold-tint
-                px-3
-                py-1.5
-                text-xs
-                font-semibold
-                text-navy-deep
-                sm:block
-              "
-            >
-              Demo · Synthetic Data
-            </span>
-
-            <button
-              type="button"
-              onClick={resetDemo}
-              className="
-                inline-flex
-                items-center
-                gap-2
-                rounded-lg
-                border
-                border-border
-                bg-white
-                px-3
-                py-2
-                text-sm
-                font-medium
-                text-ink-soft
-                hover:border-navy/25
-                hover:text-navy
-              "
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span className="hidden sm:inline">Reset demo</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <section>
           <p className="text-sm font-semibold text-gold">

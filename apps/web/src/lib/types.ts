@@ -51,6 +51,12 @@ export interface CheckIn {
   medicationStatus: MedicationStatus;
 
   note: string;
+
+  submittedBy: {
+    id: string;
+    name: string;
+    role: "patient" | "caregiver";
+  };
 }
 
 export interface Patient {
@@ -97,4 +103,30 @@ export interface PriorityResult {
   score: number;
   tier: PriorityTier;
   reasons: PriorityReason[];
+}
+
+export type CaregiverPermission =
+  | "appointments"
+  | "transportation"
+  | "care_tasks"
+  | "proxy_check_in"
+  | "clinical_notes"
+  | "navigator_notes";
+
+export interface Caregiver {
+  id: string;
+
+  patientId: string;
+
+  firstName: string;
+  lastName: string;
+
+  relationship: string;
+
+  status:
+    | "invited"
+    | "active"
+    | "revoked";
+
+  permissions: CaregiverPermission[];
 }
