@@ -10,7 +10,7 @@ import {
 const roles = [
   {
     title: "Patient",
-    name: "Maria Johnson",
+    name: "Manisha Johnson",
     description: "See your care journey and complete today's check-in.",
     href: "/patient",
     icon: UserRound,

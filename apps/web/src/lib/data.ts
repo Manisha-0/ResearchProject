@@ -3,9 +3,9 @@ import type {
   Patient,
 } from "@/lib/types";
 
-export const maria: Patient = {
-  id: "maria-johnson",
-  firstName: "Maria",
+export const manisha: Patient = {
+  id: "manisha-johnson",
+  firstName: "Manisha",
   lastName: "Johnson",
   initials: "MJ",
   age: 61,
@@ -22,7 +22,7 @@ export const maria: Patient = {
   checkIns: [],
   careGaps: [
     {
-      id: "maria-auth",
+      id: "manisha-auth",
       type: "authorization",
       title: "Authorization pending",
       description:
@@ -170,7 +170,7 @@ export const robertGuillory: Patient = {
 };
 
 export const seedPatients: Patient[] = [
-  maria,
+  manisha,
   jamesCarter,
   lindaOchoa,
   robertGuillory,
@@ -179,7 +179,7 @@ export const seedPatients: Patient[] = [
 export const caregivers: Caregiver[] = [
   {
     id: "danielle-johnson",
-    patientId: "maria-johnson",
+    patientId: "manisha-johnson",
     firstName: "Danielle",
     lastName: "Johnson",
     relationship: "Daughter",

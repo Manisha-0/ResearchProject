@@ -19,7 +19,7 @@ import { useCompassStore } from "@/store/compass-store";
 export default function CaregiverPage() {
   const patients = useCompassStore((state) => state.patients);
   const resolveGap = useCompassStore((state) => state.resolveGap);
-  const patient = patients.find((item) => item.id === "maria-johnson");
+  const patient = patients.find((item) => item.id === "manisha-johnson");
 
   if (!patient) {
     return (
@@ -69,13 +69,13 @@ export default function CaregiverPage() {
               <p className="text-sm text-ink-soft">Caregiver view</p>
 
               <h1 className="font-display text-3xl font-bold text-navy-deep">
-                Helping Maria
+                Helping Manisha
               </h1>
             </div>
           </div>
 
           <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft">
-            Hi Danielle. Here&apos;s what you can help coordinate for Maria
+            Hi Danielle. Here&apos;s what you can help coordinate for Manisha
             today.
           </p>
         </section>
@@ -147,7 +147,7 @@ export default function CaregiverPage() {
                 ) : (
                   <>
                     <p className="mt-2 text-sm font-medium text-priority-high">
-                      Maria does not have a confirmed ride.
+                      Manisha does not have a confirmed ride.
                     </p>
 
                     <p className="mt-2 text-sm leading-6 text-ink-soft">
@@ -160,7 +160,7 @@ export default function CaregiverPage() {
                       onClick={confirmTransportation}
                       className="mt-4 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep"
                     >
-                      <Car className="h-4 w-4" />I can drive Maria
+                      <Car className="h-4 w-4" />I can drive Manisha
                     </button>
                   </>
                 )}
@@ -176,7 +176,7 @@ export default function CaregiverPage() {
             </p>
 
             <h2 className="mt-1 text-lg font-semibold text-ink">
-              What Maria has shared with you
+              What Manisha has shared with you
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-ink-soft">
@@ -204,7 +204,9 @@ export default function CaregiverPage() {
 
           <div className="mt-3 flex items-center justify-between gap-4">
             <div>
-              <h2 className="font-semibold">Contact Maria&apos;s navigator</h2>
+              <h2 className="font-semibold">
+                Contact Manisha&apos;s navigator
+              </h2>
 
               <p className="mt-1 text-sm leading-6 text-white/65">
                 Ask a question about appointments, transportation, or care

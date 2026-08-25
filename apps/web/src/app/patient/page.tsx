@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/app/AppHeader";
 
 export default function PatientPage() {
   const patient = useCompassStore((state) =>
-    state.patients.find((item) => item.id === "maria-johnson"),
+    state.patients.find((item) => item.id === "manisha-johnson"),
   );
 
   if (!patient) {
@@ -22,7 +22,7 @@ export default function PatientPage() {
           <p className="text-sm text-ink-soft">Good afternoon,</p>
 
           <h1 className="mt-1 font-display text-3xl font-bold text-navy-deep">
-            Maria
+            Manisha
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-ink-soft">

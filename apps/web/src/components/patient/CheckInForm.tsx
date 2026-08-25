@@ -48,7 +48,7 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-priority-low" />
 
           <div>
-            <h2 className="font-semibold text-ink">Thank you, Maria.</h2>
+            <h2 className="font-semibold text-ink">Thank you, Manisha.</h2>
 
             <p className="mt-2 text-sm leading-6 text-ink-soft">
               Your care navigation team can now see your update.
