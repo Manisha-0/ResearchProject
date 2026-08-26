@@ -23,7 +23,7 @@ export default function NavigatorDashboard() {
 
   return (
     <main className="min-h-screen bg-surface-soft">
-      <AppHeader currentRole="navigator" showReset />
+      <AppHeader showReset />
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <section>
           <p className="text-sm font-semibold text-gold">

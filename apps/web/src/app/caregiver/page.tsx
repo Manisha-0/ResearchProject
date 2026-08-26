@@ -24,7 +24,7 @@ export default function CaregiverPage() {
   if (!patient) {
     return (
       <main className="min-h-screen bg-surface-soft">
-        <AppHeader currentRole="caregiver" />
+        <AppHeader />
 
         <div className="mx-auto max-w-3xl px-5 py-10">
           <p className="text-sm text-ink-soft">
@@ -56,7 +56,7 @@ export default function CaregiverPage() {
 
   return (
     <main className="min-h-screen bg-surface-soft">
-      <AppHeader currentRole="caregiver" />
+      <AppHeader />
 
       <div className="mx-auto max-w-3xl px-5 py-8 sm:py-10">
         <section>

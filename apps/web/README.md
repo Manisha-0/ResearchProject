@@ -1,42 +1,14 @@
-# Project Compass — Web
+# Project Compass — Web Application
 
-Frontend application for **Project Compass**, an AI-assisted cancer care navigation and early-intervention platform being developed for the **DevDays Cancer Care & Prevention Challenge in partnership with Ochsner Health**.
+The `apps/web` application contains the frontend prototype for **Project Compass**.
 
-This application contains the Patient, Caregiver, and Navigator experiences used in the semifinal prototype.
+It is built with Next.js and includes the Patient, Caregiver, and Navigator experiences.
 
-> **Current phase:** Frontend-first semifinal prototype using synthetic data and browser-persisted state.
-
----
-
-## What This App Demonstrates
-
-The web application is designed around one complete care-navigation workflow:
-
-```text
-Manisha checks in
-        ↓
-Compass detects care gaps
-        ↓
-Navigation Priority becomes HIGH
-        ↓
-James sees Manisha at the top
-        ↓
-James opens Patient 360
-        ↓
-Compass explains the priority
-        ↓
-James resolves transportation
-        ↓
-Navigation Priority drops
-        ↓
-Navigator dashboard updates
-```
-
-The goal of the semifinal build is to make this workflow polished, reliable, and easy to demonstrate before introducing backend infrastructure.
+> **Current implementation:** frontend-only synthetic-data prototype with shared browser state.
 
 ---
 
-## Current Stack
+# Technology
 
 - Next.js
 - React
@@ -44,74 +16,255 @@ The goal of the semifinal build is to make this workflow polished, reliable, and
 - Tailwind CSS
 - Zustand
 - Lucide React
-- Browser local storage
 
-The project uses the Next.js App Router.
+The application uses the Next.js App Router.
 
 ---
 
-## Application Roles
+# Current Product Flow
 
-The prototype contains three role-specific experiences.
+```text
+Public Landing Page
+        ↓
+Login
+        ↓
+Authenticated Role
+        │
+        ├── Patient
+        ├── Caregiver
+        └── Navigator
+```
+
+Roles are no longer freely switchable after login.
+
+A session determines which workspace the user enters.
+
+---
+
+# Demo Accounts
+
+The login interface includes one-click demo account access for presentation speed.
 
 ### Patient
 
-The Patient experience currently focuses on **Manisha**, a synthetic cancer patient.
-
-Routes:
-
 ```text
-/patient
+Manisha Patel
+manisha@compass.demo
 ```
-
-Current functionality includes:
-
-- Daily check-in
-- Symptom reporting
-- Transportation status
-- Medication status
-- Free-text concerns
-- Care journey information
-
-Patient check-ins feed directly into the Compass care-gap rules engine.
-
----
 
 ### Caregiver
 
-The Caregiver experience currently focuses on **Danielle**, Manisha's daughter.
-
-Routes:
-
 ```text
-/caregiver
+Danielle Patel
+danielle@compass.demo
 ```
 
-Current functionality includes:
+### Navigator
 
-- View permitted appointment information
-- View transportation status
-- Coordinate transportation
-- View permission-scoped access
-- Resolve permitted logistics barriers
+```text
+James Wilson
+james@compass.demo
+```
 
-The caregiver relationship is intentionally permission-based.
+The password used internally by the frontend demo is:
 
-The intended workflow is:
+```text
+demo123
+```
+
+The presenter does not need to type credentials.
+
+Clicking a demo account signs in immediately and routes to the correct workspace.
+
+This is demo authentication only.
+
+---
+
+# Routes
+
+| Route                     | Description                  |
+| ------------------------- | ---------------------------- |
+| `/`                       | Public Compass landing page  |
+| `/login`                  | Login and demo-account entry |
+| `/patient`                | Patient workspace            |
+| `/caregiver`              | Caregiver workspace          |
+| `/navigator`              | Navigator Care-Gap Dashboard |
+| `/navigator/patient/[id]` | Patient 360                  |
+
+---
+
+# Patient Experience
+
+The Patient experience currently demonstrates Manisha's synthetic cancer-care journey.
+
+The patient can see:
+
+- Current care stage
+- Previous milestones
+- Upcoming milestones
+- Appointments
+- Location and appointment time
+- Care-plan documents
+- Patient-friendly summaries
+- Transportation status
+- Daily check-in
+
+The patient contributes:
+
+- Symptom severity
+- Transportation status
+- Medication status
+- Free-text concerns
+
+These signals update the same patient record used by the Navigator workspace.
+
+---
+
+# Care Journey
+
+The formal journey is maintained by the navigator/care team.
+
+Journey items can represent:
+
+```text
+Diagnosis
+Consultation
+Treatment plan
+Treatment
+Appointments
+Support services
+Survivorship
+```
+
+Each item records:
+
+- Title
+- Description
+- Date
+- Status
+- Who last updated it
+
+Journey statuses include:
+
+```text
+completed
+current
+upcoming
+```
+
+This allows the Patient workspace to answer:
+
+```text
+What already happened?
+Where am I now?
+What happens next?
+```
+
+---
+
+# Appointments
+
+Appointments belong to the patient record.
+
+The Navigator workspace is responsible for creating/updating formal appointments in the prototype.
+
+Patient and permitted caregivers can view them.
+
+Appointments include:
+
+- Title
+- Date
+- Time
+- Location
+- Status
+- Created by
+
+Adding an appointment can also add a corresponding Care Journey milestone.
+
+---
+
+# Documents
+
+The Navigator workspace can add documents associated with a patient's care journey.
+
+The prototype stores synthetic document metadata and source text.
+
+A document includes:
+
+- Title
+- Category
+- Filename
+- Source content
+- Uploaded by
+- Upload date
+- Patient-friendly summary
+
+The Patient workspace displays the patient-friendly explanation.
+
+The does not upload or store real files or PHI.
+
+---
+
+# Caregiver Model
+
+Caregiver relationships are explicitly connected to one patient.
+
+The intended production flow is:
 
 ```text
 Navigator creates invitation
         ↓
 Patient approves caregiver
         ↓
-Patient selects permissions
+Patient chooses permissions
         ↓
 Caregiver activates access
 ```
 
-A caregiver cannot independently attach themselves to a patient's record.
+Current caregiver permissions include:
 
-Future caregiver functionality includes proxy check-ins when the patient explicitly grants the:
+```text
+appointments
+transportation
+care_tasks
+proxy_check_in
+clinical_notes
+navigator_notes
+```
+
+Danielle's current synthetic permission set allows:
+
+```text
+✓ Appointments
+✓ Transportation
+✓ Care tasks
+✓ Proxy check-in
+
+✕ Clinical notes
+✕ Navigator notes
+```
+
+Caregivers cannot independently attach themselves to a patient record.
+
+---
+
+# Proxy Check-Ins
+
+The domain model supports identifying who submitted each check-in.
+
+Example:
+
+```ts
+submittedBy: {
+  id: "danielle-patel",
+  name: "Danielle Patel",
+  role: "caregiver",
+}
+```
+
+This makes proxy entries distinguishable from patient-entered information.
+
+A caregiver should only be able to submit a check-in when the relationship is active and the caregiver has:
 
 ```text
 proxy_check_in
@@ -119,283 +272,223 @@ proxy_check_in
 
 permission.
 
----
-
-### Navigator
-
-The Navigator experience represents **James**, a cancer care navigator.
-
-Routes:
-
-```text
-/navigator
-
-/navigator/patient/[id]
-```
-
-Current functionality includes:
-
-- Care-Gap Dashboard
-- Navigation Priority ranking
-- Patient 360
-- Active care-gap review
-- Check-in history
-- Priority explanation
-- Care-gap resolution
-- Compass Copilot
-
-The Navigator Dashboard is the primary desktop experience.
+The complete caregiver proxy-check-in UI is part of the next prototype refinement.
 
 ---
 
 # Navigation Priority
 
-Navigation Priority is intentionally implemented using transparent rules rather than an opaque AI model.
+The scoring engine lives separately from AI functionality.
 
-The current demonstration weights are:
-
-| Signal                    | Points |
-| ------------------------- | -----: |
-| Treatment within 48 hours |    +30 |
-| Transportation unresolved |    +25 |
-| Severe symptom reported   |    +20 |
-| Authorization pending     |    +15 |
-| Medication difficulty     |    +12 |
-
-For example:
+Current weights:
 
 ```text
-Treatment tomorrow             +30
-Transportation unresolved      +25
-Severe nausea                  +20
-Authorization pending          +15
-                               ───
-Navigation Priority             90
+Treatment within 48 hours       +30
+Transportation unresolved       +25
+Severe symptom reported         +20
+Authorization pending           +15
+Medication difficulty           +12
 ```
 
-The score is called **Navigation Priority**, not clinical risk.
+The engine returns:
 
-The rules engine determines priority.
+```ts
+{
+  (score, tier, reasons);
+}
+```
 
-The AI/Copilot layer does not determine the score.
+Priority is always derived from patient state rather than stored as a hardcoded number.
 
 ---
 
+# Care-Gap Workflow
+
+When a check-in is submitted, Compass can create navigation gaps.
+
+Examples include:
+
+```text
+Transportation unresolved
+Severe symptom reported
+Medication concern
+Authorization pending
+```
+
+Resolving a gap updates the same patient state used by:
+
+- Patient 360
+- Navigation Priority
+- Navigator Dashboard
+- Compass Summary
+- Copilot
+- Administrative Brief
+
+This is the primary shared-state loop of the prototype.
+
+---
+
+# AI Prototype Layer
+
+This version uses deterministic functions grounded in the synthetic patient record.
+
+This avoids making the presentation dependent on an external AI API.
+
+Current AI-facing functionality includes:
+
+## Compass Summary
+
+Explains what currently needs navigator attention.
+
 ## Compass Copilot
 
-Compass Copilot is the navigator-facing explanation layer.
-
-It is designed to answer questions such as:
+Supports prompts such as:
 
 ```text
 What needs attention today?
 
-Prepare my call with Manisha
+Prepare my call with Manisha.
 
 What changed since the last check-in?
 ```
 
-For the semifinal prototype, responses are grounded directly in the synthetic Compass patient record and may be generated deterministically.
+## Administrative Brief
 
-This keeps the live demonstration reliable while preserving the intended architecture:
+Combines open administrative tasks into one navigator-focused view.
+
+## Patient-Friendly Document Summary
+
+Transforms synthetic source text into a simpler patient-facing explanation.
+
+Production versions of these features are designed to connect to an LLM/RAG layer.
+
+---
+
+# Important Separation
+
+Never combine AI and Navigation Priority logic.
+
+Maintain:
 
 ```text
-Patient Record
-      │
-      ├──────────────┐
-      ▼              ▼
-Rules Engine      Copilot
-      │              │
-      ▼              │
-Navigation           │
-Priority             │
-      │              │
-      └──────┬───────┘
-             ▼
-         Navigator
-             │
-             ▼
-           Action
+scoring.ts
+    ↓
+Navigation Priority
 ```
 
-A finalist implementation can replace the Copilot generation layer with an LLM/RAG service without changing the priority engine.
-
----
-
-# Project Structure
-
-The application follows the Next.js `src` structure:
-
-```text
-apps/web/
-├── public/
-│
-├── src/
-│   ├── app/
-│   │   ├── caregiver/
-│   │   │   └── page.tsx
-│   │   │
-│   │   ├── navigator/
-│   │   │   ├── page.tsx
-│   │   │   └── patient/
-│   │   │       └── [id]/
-│   │   │           └── page.tsx
-│   │   │
-│   │   ├── patient/
-│   │   │   └── page.tsx
-│   │   │
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   │
-│   ├── components/
-│   │   ├── app/
-│   │   ├── caregiver/
-│   │   ├── navigator/
-│   │   └── patient/
-│   │
-│   ├── lib/
-│   │   ├── copilot.ts
-│   │   ├── data.ts
-│   │   ├── scoring.ts
-│   │   └── types.ts
-│   │
-│   └── store/
-│       └── compass-store.ts
-│
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
----
-
-# Key Files
-
-## `src/lib/types.ts`
-
-Contains the shared domain types used throughout the prototype:
-
-- Patient
-- CheckIn
-- CareGap
-- Caregiver
-- CaregiverPermission
-- Treatment information
-
-Keep domain definitions here rather than defining duplicate types inside components.
-
----
-
-## `src/lib/data.ts`
-
-Contains synthetic seed data for the demonstration.
-
-This includes:
-
-- Manisha
-- Danielle
-- Other synthetic dashboard patients
-- Care gaps
-- Initial check-ins
-- Caregiver relationships
-
-No real patient data should ever be added to this file.
-
----
-
-## `src/lib/scoring.ts`
-
-Contains the explainable Navigation Priority rules engine.
-
-This file should remain separate from:
+separately from:
 
 ```text
 copilot.ts
+admin-ai.ts
+summaries.ts
+    ↓
+Explanation and administrative assistance
 ```
 
-because priority calculation and AI explanation serve different purposes.
+AI must not calculate or determine the patient's priority score.
 
 ---
 
-## `src/lib/copilot.ts`
+# State Management
 
-Contains the prototype Compass Copilot response-generation logic.
+The prototype uses Zustand.
 
-The semifinal implementation is intentionally deterministic and grounded in the current patient record.
+Primary store:
 
-A future LLM integration should preserve the same interface where practical so UI components do not need to understand which model/provider is being used.
+```text
+src/store/compass-store.ts
+```
 
----
+It manages:
 
-## `src/store/compass-store.ts`
-
-Contains the shared prototype application state using Zustand.
-
-Responsibilities currently include:
-
-- Patient state
-- Caregiver state
-- Check-in submission
-- Care-gap creation
-- Care-gap resolution
+- Current demo session
+- Patients
+- Caregivers
+- Check-ins
+- Care gaps
+- Appointments
+- Documents
+- Journey updates
+- Gap resolution
+- Login/logout
 - Demo reset
-- Browser persistence
 
-This is a **prototype state layer**, not the intended production persistence architecture.
+Current browser persistence key:
+
+```text
+project-compass-demo-v3
+```
+
+Browser local storage is strictly a prototype implementation detail.
 
 ---
 
-# State Persistence
-
-The semifinal prototype persists application state in the browser so the story can move between roles without losing changes.
-
-Current storage key:
+# Important Source Files
 
 ```text
-project-compass-demo-v2
+src/
+├── app/
+│   ├── login/
+│   ├── patient/
+│   ├── caregiver/
+│   ├── navigator/
+│   └── page.tsx
+│
+├── components/
+│   ├── app/
+│   ├── patient/
+│   ├── caregiver/
+│   └── navigator/
+│
+├── lib/
+│   ├── admin-ai.ts
+│   ├── copilot.ts
+│   ├── data.ts
+│   ├── scoring.ts
+│   ├── summaries.ts
+│   └── types.ts
+│
+└── store/
+    └── compass-store.ts
 ```
-
-This allows a workflow such as:
-
-```text
-Patient check-in
-      ↓
-Navigate to Navigator
-      ↓
-Updated patient remains available
-      ↓
-Resolve care gap
-      ↓
-Return to Dashboard
-      ↓
-Updated priority remains visible
-```
-
-Browser local storage is not intended to be the production patient-data store.
-
-The finalist architecture will move persistent records behind the API/database layer.
 
 ---
 
-# Getting Started
+# Header & Authentication
+
+`AppHeader` displays the current authenticated user and role.
+
+The header should not provide Patient/Caregiver/Navigator role switching.
+
+Role access comes from the current session.
+
+The header currently supports:
+
+- Compass branding
+- Current user's name
+- Current role
+- Synthetic-data badge
+- Demo reset where appropriate
+- Sign out
+
+Sign out clears the session and returns to the public landing page.
+
+---
+
+# Running Locally
 
 From the repository root:
 
 ```bash
 npm install
-```
-
-Start the web application:
-
-```bash
 npm run dev
 ```
 
-Or from this directory:
+Or from `apps/web`:
 
 ```bash
-cd apps/web
+npm install
 npm run dev
 ```
 
@@ -407,253 +500,150 @@ http://localhost:3000
 
 ---
 
-# Important Routes
+# Development Validation
 
-| Route                     | Purpose                         |
-| ------------------------- | ------------------------------- |
-| `/`                       | Demo home / role selection      |
-| `/patient`                | Manisha's patient experience    |
-| `/caregiver`              | Danielle's caregiver experience |
-| `/navigator`              | James's Care-Gap Dashboard      |
-| `/navigator/patient/[id]` | Navigator Patient 360           |
-
-Do not require presenters to manually type routes during the demo.
-
-All important demo routes should be reachable through the application UI.
-
----
-
-# Demo Scenario
-
-Before presentation rehearsal, reset the demo.
-
-Then enter as Manisha.
-
-Submit:
-
-```text
-Nausea
-Severe
-
-Transportation
-Not sure
-
-Medication
-On track
-
-Note
-"I'm worried I won't have a ride tomorrow."
-```
-
-Compass should detect:
-
-```text
-Treatment within 48 hours      +30
-Transportation unresolved      +25
-Severe nausea                  +20
-Authorization pending          +15
-                               ───
-Navigation Priority             90
-```
-
-Switch to Navigator.
-
-Manisha should appear near or at the top of the Care-Gap Dashboard with:
-
-```text
-HIGH · 90
-```
-
-Open Patient 360.
-
-Show:
-
-- Upcoming treatment
-- Latest check-in
-- Active care gaps
-- Priority explanation
-- Compass Copilot
-
-Ask Copilot:
-
-```text
-Prepare my call with Manisha
-```
-
-Then resolve the transportation barrier.
-
-The transportation gap should close and the Navigation Priority should decrease.
-
-Return to the dashboard and show the updated ranking.
-
----
-
-# Development Rules
-
-## Keep the Demo Reliable
-
-The semifinal application should prioritize reliability over architectural complexity.
-
-Do not introduce external services into the critical demo path unless they materially improve the presentation.
-
-In particular, the prototype does not require:
-
-- PostgreSQL
-- FastAPI
-- Real authentication
-- Live LLM API calls
-- FHIR integration
-- WebSockets
-
-Those belong to the finalist implementation.
-
----
-
-## Keep Priority Explainable
-
-Never move Navigation Priority calculation into the Copilot or an LLM.
-
-Maintain:
-
-```text
-Rules → Priority
-
-Patient record → Copilot explanation
-```
-
-not:
-
-```text
-LLM → Priority
-```
-
----
-
-## Keep Data Synthetic
-
-All patient information used by this application must be synthetic.
-
-Do not add:
-
-- Real names
-- Real medical records
-- Real appointment information
-- Real PHI
-- Real patient identifiers
-
-The UI should continue to identify the application as a synthetic-data prototype where appropriate.
-
----
-
-# Quality Checks
-
-Before committing a completed feature:
+Before committing a major change:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-Both commands should pass.
+Do not rely only on `npm run dev`.
 
-The production build is especially important because development mode can tolerate problems that fail during deployment.
+Production build validation is important before deployment.
 
 ---
 
-# Resetting Local Demo State
+# Demo Reset
 
-Use the application's **Reset Demo** functionality whenever possible.
+Use the Reset Demo action in the Navigator interface to restore the synthetic patient dataset.
 
-During development, if persisted state becomes incompatible after a schema change, the local browser state can also be cleared.
-
-Current key:
+If development changes make browser state incompatible, clear:
 
 ```text
-project-compass-demo-v2
+project-compass-demo-v3
 ```
 
-In Chrome:
+from browser Local Storage and refresh.
+
+---
+
+# Prototype Demo Sequence
+
+Recommended sequence:
 
 ```text
-Developer Tools
-→ Application
-→ Local Storage
-→ http://localhost:3000
-→ project-compass-demo-v2
+Landing Page
+    ↓
+Navigator login
+    ↓
+Show patient journey/admin workflow briefly
+    ↓
+Sign out
+    ↓
+Patient login
+    ↓
+Show journey + documents + appointment
+    ↓
+Submit urgent check-in
+    ↓
+Sign out
+    ↓
+Navigator login
+    ↓
+Dashboard shows Manisha at HIGH 90
+    ↓
+Patient 360
+    ↓
+Explain scoring
+    ↓
+AI Admin Brief / Copilot
+    ↓
+Resolve transportation
+    ↓
+Priority becomes 65
+    ↓
+Dashboard updates
 ```
 
-Delete the key and refresh.
+Caregiver should be shown briefly or during Q&A unless presentation timing allows more.
 
-Do not build production-style database migrations for temporary browser prototype state.
+---
+
+# Current Limitations
+
+The prototype application intentionally does not yet include:
+
+- Production authentication
+- Server-side authorization
+- FastAPI
+- PostgreSQL
+- Real file storage
+- Live LLM APIs
+- FHIR integration
+- Production audit logs
+- Full offline synchronization
+- Production PWA service worker behavior
+
+These are planned for the finalist architecture.
 
 ---
 
 # PWA Direction
 
-The web application is intended to become an installable Progressive Web App.
+The application is intended to become an installable Progressive Web App.
 
-The PWA direction supports:
-
-- Mobile patient experience
-- Mobile caregiver experience
-- Desktop navigator experience
-- Installable application behavior
-- Future offline check-ins
-- Future queued synchronization
-- Shared/community-device scenarios
-
-Offline functionality should be introduced carefully so it does not compromise the reliability of the semifinal demonstration.
-
----
-
-# Finalist Architecture
-
-If Project Compass advances, the frontend is designed to connect to:
+This allows one frontend codebase to support:
 
 ```text
-Next.js PWA
-      │
-      ▼
-FastAPI
-      │
-      ├───────────────┐
-      ▼               ▼
-PostgreSQL       Rules Engine
-      │
-      ▼
-Patient Records
-      │
-      ├───────────────┐
-      ▼               ▼
-Audit Log        LLM / RAG
-                      │
-                      ▼
-               Compass Copilot
+Patient phone
+Caregiver phone
+Navigator desktop
+Shared clinic/community device
 ```
 
-The browser store used in the semifinal prototype will then become frontend state/cache rather than the source of truth.
+Planned PWA functionality includes:
+
+- Installable application
+- Application manifest
+- Service worker
+- Offline application shell
+- Offline patient check-in queue
+- Synchronization after connectivity returns
+
+These capabilities are especially relevant to rural and low-connectivity environments.
 
 ---
 
-# Safety
+# Data Safety
 
-Project Compass is a hackathon prototype.
+All current records are synthetic.
 
-It does not:
+Do not add:
 
-- Diagnose cancer
-- Recommend treatment
-- Recommend medication
-- Predict hospitalization
-- Replace clinicians
-- Replace cancer navigators
+- Real patient names
+- Real clinical records
+- Real appointments
+- PHI
+- Real medical documents
 
-Navigation Priority is an explainable prototype rules engine and has not been clinically validated.
-
-Compass is designed to put the **right navigation problem in front of the right human at the right time**.
+The prototype should always be clearly identified as synthetic where appropriate.
 
 ---
 
-**Project Compass — Web Prototype**
+# Disclaimer
 
-_Synthetic data only. No real patient information is used._
+This application is a hackathon prototype.
+
+It does not provide:
+
+- Diagnosis
+- Medication recommendations
+- Treatment recommendations
+- Hospitalization prediction
+- Clinical prioritization
+
+Navigation Priority is an explainable navigation workflow score and has not been clinically validated.
+
+Humans remain responsible for care decisions and intervention.

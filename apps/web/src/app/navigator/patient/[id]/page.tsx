@@ -11,7 +11,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
-
+import { NavigatorAdminPanel } from "@/components/navigator/NavigatorAdminPanel";
 import { PriorityBadge } from "@/components/navigator/PriorityBadge";
 import { computePriority } from "@/lib/scoring";
 import { AppHeader } from "@/components/app/AppHeader";
@@ -60,7 +60,7 @@ export default function PatientDetailPage() {
 
   return (
     <main className="min-h-screen bg-surface-soft">
-      <AppHeader currentRole="navigator" showReset />
+      <AppHeader showReset />
       <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
         <Link
           href="/navigator"
@@ -298,6 +298,9 @@ export default function PatientDetailPage() {
                   Navigation Priority is not a clinical-risk score and does not
                   replace care-team judgment.
                 </p>
+              </div>
+              <div className="mt-6">
+                <NavigatorAdminPanel patient={patient} />
               </div>
             </section>
           </aside>

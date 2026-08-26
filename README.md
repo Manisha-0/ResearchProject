@@ -1,153 +1,198 @@
 # Project Compass
 
-### AI-Powered Cancer Care Navigation & Early-Intervention Platform
+## AI-Assisted Cancer Care Navigation & Early-Intervention Platform
 
 **DevDays Cancer Care & Prevention Challenge — in partnership with Ochsner Health**
 
 > **Compass doesn't replace the cancer navigator. It gives every navigator an intelligent safety net.**
 
-Project Compass is a care-navigation prototype designed to help cancer navigation teams identify patient barriers earlier and focus human attention where it is needed most.
+Project Compass is a cancer care navigation platform designed to connect patient and caregiver signals with the care journey already managed by navigation teams.
 
-Instead of building another patient chatbot or attempting to make clinical decisions with AI, Compass connects patient and caregiver signals to an **explainable Navigation Priority** that helps navigators answer a practical question:
-
-> **Which patients may need my attention today, and why?**
+Its goal is to help care teams identify navigation barriers earlier, reduce administrative burden, and put the right problem in front of the right human at the right time.
 
 ---
 
-## The Problem
+## Challenge
 
-Cancer care does not stop when a patient leaves the hospital.
+Cancer patients may encounter barriers throughout diagnosis, treatment, survivorship, and supportive care, including:
 
-Patients may face barriers such as:
+- Transportation difficulties
+- Treatment authorization delays
+- Medication access issues
+- Side-effect and symptom concerns
+- Complex appointment schedules
+- Difficulty understanding care plans and documents
+- Caregiver coordination
+- Financial and geographic barriers
 
-* Transportation problems
-* Treatment authorization delays
-* Medication access issues
-* Difficult symptoms
-* Caregiver coordination challenges
-* Financial, geographic, and social barriers
+These challenges can become especially significant in rural and underserved communities.
 
-These challenges can be especially significant for patients in rural and underserved communities.
+At the same time, oncology navigation teams may manage large patient panels while coordinating appointments, records, authorizations, patient communication, social needs, and follow-up.
 
-Navigation teams already help address these problems, but a navigator may be responsible for many active patients at the same time.
-
-Compass is designed as a **triage and coordination layer for existing navigation teams**.
+Compass is designed as a coordination and prioritization layer around that existing workflow.
 
 ---
 
-## The Core Workflow
+# Product Vision
 
-The semifinal prototype demonstrates one complete end-to-end story:
+Compass connects three people around one patient journey:
 
 ```text
-Manisha checks in
-        ↓
-Compass detects care gaps
-        ↓
-Navigation Priority becomes HIGH
-        ↓
-James sees Manisha at the top of his dashboard
-        ↓
-James opens Patient 360
-        ↓
-Compass explains why she needs attention
-        ↓
-James resolves the transportation barrier
-        ↓
-Manisha's Navigation Priority drops
-        ↓
-The dashboard updates
+Patient
+   │
+   │ check-ins, concerns, questions
+   ▼
+Compass
+   ▲
+   │ appointments, documents, journey updates
+   │
+Navigator / Care Team
+
+Caregiver
+   │
+   └── permissioned logistics and proxy support
 ```
 
-The goal is simple:
+The formal care journey is maintained by the navigation team.
 
-**Detect the care gap before the patient falls through it.**
+Patients and authorized caregivers contribute patient-reported signals.
 
----
+Compass brings those sources together so a navigator can understand:
 
-## User Roles
-
-Compass is designed around three connected roles.
-
-### Patient — Manisha
-
-The patient can:
-
-* View the upcoming care journey
-* Complete a simple daily check-in
-* Report symptoms
-* Report transportation status
-* Report medication difficulties
-* Add a free-text concern
-* Share selected information with a caregiver
-
-The patient experience is intentionally simple and mobile-friendly.
+> **Who may need my attention today, why, and what administrative work is still outstanding?**
 
 ---
 
-### Caregiver — Danielle
+# Core Workflow
 
-A caregiver is connected to a specific patient through an explicit invitation and permission model.
-
-The intended production workflow is:
+The prototype demonstrates this end-to-end flow:
 
 ```text
-Navigator creates caregiver invitation
-                ↓
-Patient approves the relationship
-                ↓
-Patient chooses permissions
-                ↓
-Caregiver activates access
+Navigator creates and maintains the care journey
+        ↓
+Appointments and care documents are added
+        ↓
+Patient signs in and sees what happened and what comes next
+        ↓
+Patient completes a check-in
+        ↓
+Compass detects navigation barriers
+        ↓
+Navigation Priority changes
+        ↓
+Navigator sees the patient rise in the queue
+        ↓
+Patient 360 explains why
+        ↓
+Compass Copilot and Admin Brief organize follow-up
+        ↓
+Navigator resolves a navigation barrier
+        ↓
+Priority and patient journey update
 ```
 
-Caregiver access is **category-scoped rather than all-or-nothing**.
-
-For example, Manisha may allow Danielle to:
-
-* View appointments
-* View transportation needs
-* Coordinate transportation
-* View care tasks
-* Submit a check-in on Manisha's behalf
-
-while preventing access to:
-
-* Clinical notes
-* Navigator notes
-
-A caregiver cannot independently search for and attach themselves to a patient's record.
+The primary demo story follows **Manisha**, a synthetic patient.
 
 ---
 
-### Navigator — James
+# User Roles
 
-The navigator receives a prioritized view of assigned patients.
+## Patient
 
-The navigator can:
+Patients receive access to the care record created for them by the navigation team.
 
-* View the Care-Gap Dashboard
-* See patients ordered by Navigation Priority
-* Open Patient 360
-* Understand why a patient was prioritized
-* Review patient check-ins
-* Review active care gaps
-* Resolve navigation barriers
-* Use Compass Copilot to summarize the patient's navigation record
+The patient experience includes:
 
-The human navigator remains responsible for deciding what action to take.
+- Upcoming appointments
+- Current stage in the care journey
+- Earlier milestones
+- Care-plan documents
+- Plain-language document summaries
+- Daily check-ins
+- Transportation reporting
+- Medication-access reporting
+- Symptom reporting
+- Free-text concerns
+
+The patient does not need to reconstruct the cancer journey from multiple disconnected systems.
+
+Compass provides one organized view of:
+
+```text
+What already happened
+        ↓
+Where I am now
+        ↓
+What happens next
+```
+
+---
+
+## Caregiver
+
+Caregivers cannot independently attach themselves to a patient.
+
+The intended access flow is:
+
+```text
+Navigator creates invitation
+        ↓
+Patient approves caregiver relationship
+        ↓
+Patient selects permissions
+        ↓
+Caregiver activates Compass access
+```
+
+Permissions are scoped by category.
+
+For example, a patient may allow a caregiver to:
+
+- View appointments
+- Coordinate transportation
+- View care tasks
+- Complete check-ins on the patient's behalf
+
+while restricting:
+
+- Clinical notes
+- Navigator notes
+- Other private care information
+
+Every proxy action is designed to preserve who entered the information.
+
+---
+
+## Navigator
+
+The Navigator workspace is the operational center of Compass.
+
+Navigators can:
+
+- Review the Care-Gap Dashboard
+- See patients ranked by Navigation Priority
+- Open Patient 360
+- Review recent check-ins
+- Understand why a patient was prioritized
+- Review open and resolved care gaps
+- Add appointments
+- Add patient documents
+- Maintain the care journey
+- Review AI-assisted administrative follow-up
+- Use Compass Copilot
+- Resolve navigation barriers
+
+The navigator or care team remains responsible for action and escalation.
 
 ---
 
 # Navigation Priority
 
-Compass deliberately separates **priority calculation** from **AI-generated explanation**.
+Compass deliberately separates **navigation prioritization** from AI.
 
-Navigation Priority is calculated using transparent rules rather than an opaque machine-learning model.
+The current prototype uses transparent weighted rules:
 
-Current prototype rules include:
-
-| Signal                    | Points |
+| Navigation signal         | Points |
 | ------------------------- | -----: |
 | Treatment within 48 hours |    +30 |
 | Transportation unresolved |    +25 |
@@ -158,301 +203,286 @@ Current prototype rules include:
 Example:
 
 ```text
-Treatment tomorrow             +30
-Transportation not confirmed   +25
-Severe nausea                  +20
-Authorization pending          +15
-                               ───
-Navigation Priority             90
+Treatment within 48 hours     +30
+Transportation unresolved     +25
+Severe nausea reported        +20
+Authorization pending         +15
+                              ───
+Navigation Priority            90
 ```
 
-This results in:
+Compass calls this **Navigation Priority**, not clinical risk.
 
-```text
-HIGH · 90
-```
-
-The score is called **Navigation Priority**, not clinical risk.
-
-It is not intended to diagnose disease, predict hospitalization, recommend medication, or replace clinical judgment.
+It is not intended to diagnose disease, predict hospitalization, or determine treatment.
 
 ---
 
-## Compass Copilot
+# How AI Helps
 
-Compass Copilot helps the navigator understand information already contained in the patient's Compass record.
+AI in Compass is designed primarily to reduce information and administrative burden.
 
-Prototype questions include:
+It is kept architecturally separate from the rules engine.
 
-* **What needs attention today?**
-* **Prepare my call with Manisha**
-* **What changed since the last check-in?**
+## 1. Navigator Summary
 
-For the semifinal prototype, Copilot responses can be generated deterministically from synthetic patient records so the demonstration remains reliable.
+Compass organizes current patient signals into a concise explanation of what may require attention.
 
-The intended finalist architecture replaces the response-generation layer with an LLM/RAG service while preserving the separation between AI and priority logic:
+---
+
+## 2. Administrative Brief
+
+Compass assembles outstanding work such as:
+
+- Transportation follow-up
+- Authorization follow-up
+- Medication access
+- Appointment preparation
+- Patient-reported changes
+
+This allows the navigator to review an action-oriented brief instead of manually scanning the complete record.
+
+---
+
+## 3. Compass Copilot
+
+The navigator can ask record-grounded questions such as:
 
 ```text
-Patient / Caregiver Signals
-            │
-            ▼
-   Structured Patient Record
-            │
-       ┌────┴────┐
-       │         │
-       ▼         ▼
- Rules Engine   Copilot / Summary
-       │         │
-       ▼         │
- Navigation      │
- Priority        │
-       │         │
-       └────┬────┘
+What needs attention today?
+
+Prepare my call with Manisha.
+
+What changed since the last check-in?
+```
+
+This version uses deterministic generation from synthetic structured data so the live demonstration remains reliable.
+
+A finalist version can replace that generation layer with an LLM/RAG service.
+
+---
+
+## 4. Patient-Friendly Document Summaries
+
+When the navigation team adds a care document, Compass can create a simpler explanation for the patient.
+
+This is designed to reduce repeated administrative rewriting while helping patients understand what was added to their care record.
+
+---
+
+# Safety Architecture
+
+Compass separates:
+
+```text
+Rules Engine
+    ↓
+Navigation Priority
+```
+
+from:
+
+```text
+Patient Record
+    ↓
+AI Summary / Copilot / Administrative Assistance
+```
+
+AI explains and organizes.
+
+AI does **not** determine Navigation Priority.
+
+Humans remain responsible for clinical and navigation decisions.
+
+---
+
+# Prototype Architecture
+
+The prototype intentionally prioritizes the complete product workflow over production infrastructure.
+
+```text
+Next.js / React
+      │
+      ▼
+Patient │ Caregiver │ Navigator
+      │
+      ▼
+Zustand Application Store
+      │
+      ▼
+Browser Persistence
+      │
+      ├───────────────┐
+      ▼               ▼
+Rules Engine     AI Prototype Layer
+      │               │
+      ▼               ▼
+Navigation        Summaries /
+Priority          Copilot /
+                  Admin Brief
+```
+
+All data in the prototype is synthetic.
+
+---
+
+# Target Finalist Architecture
+
+If selected for the final round:
+
+```text
+Next.js PWA
+     │
+     ▼
+FastAPI
+     │
+     ├──────────────┐
+     ▼              ▼
+PostgreSQL     Rules Engine
+     │
+     ├──────────────┐
+     ▼              ▼
+Audit / RBAC    LLM + RAG
+     │              │
+     └──────┬───────┘
             ▼
         Navigator
-            │
-            ▼
-          Action
 ```
 
-**Rules determine priority. AI explains and summarizes.**
+Planned finalist work includes:
+
+- PostgreSQL persistence
+- FastAPI backend
+- Authentication and server-enforced RBAC
+- Audit logging
+- LLM/RAG integration
+- `pgvector`
+- PWA installability
+- Offline check-in queueing
+- Background synchronization
+- FHIR-compatible integration
+- Real-time dashboard updates
+- Expanded caregiver authorization workflows
 
 ---
 
-# Current Prototype Scope
+# Data Model
 
-The semifinal version is intentionally focused on demonstrating the core Compass workflow.
+The prototype models:
 
-### Implemented / In Progress
+- Patients
+- Check-ins
+- Care gaps
+- Appointments
+- Care journey milestones
+- Documents
+- Caregivers
+- Caregiver permissions
+- Navigation Priority
+- Demo sessions
 
-* Patient role
-* Caregiver role
-* Navigator role
-* Patient daily check-in
-* Care-gap detection
-* Transparent Navigation Priority scoring
-* Navigator Care-Gap Dashboard
-* Patient 360
-* Caregiver permission model
-* Care-gap resolution
-* Shared application state
-* Demo reset
-* Persistent browser demo state
-* Compass Copilot
-* Responsive web interface
-
-### Planned for a Finalist Build
-
-If selected for the final round, the prototype architecture is designed to expand to include:
-
-* FastAPI backend
-* PostgreSQL database
-* Server-side RBAC
-* Authentication and secure sessions
-* Audit logging
-* LLM-powered summaries
-* Retrieval-augmented Copilot
-* `pgvector` retrieval
-* PWA offline support
-* Background synchronization
-* FHIR-compatible integration layer
-* Real-time navigator dashboard updates
+The schema is intentionally structured so the frontend can later connect to a real backend without redesigning the product experience.
 
 ---
 
-# Technology
+# Authentication & Role Flow
 
-## Semifinal Prototype
+The includes a simulated login experience.
+
+Users do not select another role after authentication.
+
+Their workspace is determined by their authenticated role:
 
 ```text
-Next.js
-React
-TypeScript
-Tailwind CSS
-Zustand
-Lucide React
-Browser local storage
+Patient account
+     ↓
+Patient workspace
+
+Caregiver account
+     ↓
+Caregiver workspace
+
+Navigator account
+     ↓
+Navigator workspace
 ```
 
-The semifinal application is intentionally frontend-first so the team can demonstrate the complete patient-to-navigator workflow reliably.
+For presentation speed, the login page includes one-click demo accounts.
 
-No real patient information is used.
+Manual username/password inputs remain visible to communicate the intended authentication flow.
+
+Production Compass would use health-system identity infrastructure and server-enforced authorization.
 
 ---
 
-## Target Architecture
+# Repository Structure
 
 ```text
-┌─────────────────────────────┐
-│      Next.js / React PWA    │
-│                             │
-│ Patient │ Caregiver │ Nav.  │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│      Python / FastAPI       │
-│                             │
-│ API │ RBAC │ Rules Engine   │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│         PostgreSQL          │
-│                             │
-│ Patient │ Gaps │ Audit Log  │
-└──────────────┬──────────────┘
-               │
-        ┌──────┴───────┐
-        ▼              ▼
-   Rules Engine     LLM + RAG
-        │              │
-        ▼              ▼
-   Navigation       Summary /
-    Priority         Copilot
-```
-
----
-
-# Data & Safety
-
-## Synthetic Data
-
-All patients and events shown in the prototype are synthetic.
-
-**No real patient information is used.**
-
-Manisha, Danielle, James, and the other patient records in the application are fictional demo personas.
-
----
-
-## AI Safety
-
-Compass does not use an LLM to determine Navigation Priority.
-
-The AI layer is designed for:
-
-* Summarization
-* Information organization
-* Navigator call preparation
-* Record-grounded question answering
-
-The rules engine remains separate and explainable.
-
-Compass does not:
-
-* Diagnose cancer
-* Recommend medication
-* Prescribe treatment
-* Predict hospitalization
-* Replace a navigator
-* Replace a clinician
-
-Humans remain responsible for care decisions.
-
----
-
-## HIPAA-Aware Design
-
-The hackathon prototype is **not represented as a HIPAA-compliant production system**.
-
-The architecture is instead designed around principles that would matter in a production healthcare deployment, including:
-
-* Role-based access control
-* Minimum-necessary caregiver permissions
-* Audit logging
-* Encryption in transit and at rest
-* Traceable record access
-* Explicit caregiver authorization
-* FHIR-compatible data mapping
-* BAA-supported infrastructure for production PHI processing
-
-Production deployment would require appropriate security review, agreements, infrastructure, and health-system integration.
-
----
-
-# Project Structure
-
-The frontend currently lives in:
-
-```text
-apps/web/
-├── src/
-│   ├── app/
-│   │   ├── caregiver/
-│   │   ├── navigator/
-│   │   │   └── patient/
-│   │   ├── patient/
-│   │   └── page.tsx
-│   │
-│   ├── components/
-│   │   ├── app/
-│   │   ├── caregiver/
-│   │   ├── navigator/
-│   │   └── patient/
-│   │
-│   ├── lib/
-│   │   ├── data.ts
-│   │   ├── scoring.ts
-│   │   ├── copilot.ts
-│   │   └── types.ts
-│   │
-│   └── store/
-│       └── compass-store.ts
+compass/
+├── apps/
+│   └── web/
+│       └── Next.js -> prototype
 │
 ├── package.json
-└── ...
+└── README.md
 ```
 
-The repository structure leaves room for a future backend without restructuring the frontend:
+The repository is intentionally structured so additional applications can be introduced later:
 
 ```text
 apps/
 ├── web/
-└── api/       # finalist phase
+└── api/
 ```
 
 ---
 
-# Getting Started
+# Running the Project
 
-## Requirements
-
-Use a current Node.js LTS release and npm.
-
-Install dependencies from the repository root:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Start the development server:
+Start development:
 
 ```bash
 npm run dev
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:3000
 ```
 
-The home screen provides role-based navigation into the Patient, Caregiver, and Navigator experiences.
-
 ---
 
-# Demo Flow
+# Recommended Demo Flow
 
-For the intended presentation flow:
+### 1. Open Compass
 
-### 1. Reset the demo
+Start on the public product landing page.
 
-Start from the seeded synthetic state.
+### 2. Sign in as Navigator
 
-### 2. Enter as Manisha
+Briefly show:
 
-Submit a check-in indicating:
+- Existing care journey
+- Appointments
+- Documents
+- Administrative workflow
+
+### 3. Sign out and enter Patient account
+
+Show that Manisha sees:
+
+- Previous milestones
+- Upcoming treatment
+- Documents
+- Plain-language summaries
+
+Submit:
 
 ```text
 Nausea: Severe
@@ -463,116 +493,77 @@ Note:
 "I'm worried I won't have a ride tomorrow."
 ```
 
-### 3. Switch to James — Navigator
+### 4. Return as Navigator
 
-The Care-Gap Dashboard should surface Manisha as a high-priority patient.
-
-Her score demonstrates the transparent rules:
+Manisha's Navigation Priority should rise to:
 
 ```text
-+30 Treatment within 48 hours
-+25 Transportation unresolved
-+20 Severe symptom
-+15 Authorization pending
-──────────────────────────────
- 90 Navigation Priority
+90 · HIGH
 ```
 
-### 4. Open Patient 360
+Open Patient 360.
 
 Show:
 
-* Upcoming treatment
-* Latest check-in
-* Active care gaps
-* Navigation Priority
-* Explanation of the score
+- Why she was prioritized
+- Active care gaps
+- Latest check-in
+- AI Admin Brief
+- Compass Summary
+- Copilot
 
-### 5. Open Compass Copilot
+### 5. Resolve transportation
 
-Ask:
+The transportation barrier closes and Navigation Priority decreases.
 
-```text
-Prepare my call with Manisha
-```
+### 6. Return to Dashboard
 
-Compass should summarize the navigation issues requiring James's attention.
-
-### 6. Resolve transportation
-
-James resolves the transportation gap.
-
-Compass recalculates the patient state and the Navigation Priority drops.
-
-### 7. Return to the dashboard
-
-Manisha's new priority is reflected in the navigator queue.
-
-This demonstrates the complete Compass loop:
-
-**Sense → Understand → Prioritize → Intervene**
+Show that the queue automatically reflects the updated patient state.
 
 ---
 
-# PWA Direction
+# Synthetic Data & Compliance
 
-Compass is being designed as a Progressive Web App so the same application can support:
+All records shown in the prototype are synthetic.
 
-* Desktop navigator workflows
-* Patient smartphones
-* Caregiver smartphones
-* Shared clinic or community devices
-* Future offline check-in support
+No real patient information is used.
 
-The PWA approach avoids requiring a native app-store installation while preserving a path toward installable and offline-capable experiences.
+The prototype is not represented as a HIPAA-compliant production deployment.
 
----
+The production architecture is designed around:
 
-# Development Checks
-
-Before committing a feature:
-
-```bash
-npm run lint
-npm run build
-```
-
-Both should pass before demo deployment.
-
----
-
-# Demo State
-
-Prototype state is currently persisted locally in the browser using Zustand persistence.
-
-The current development storage key is:
-
-```text
-project-compass-demo-v2
-```
-
-This is strictly a prototype implementation detail.
-
-Production patient data would not use browser local storage as the system of record.
+- Role-based access control
+- Minimum-necessary caregiver access
+- Audit logs
+- Encryption
+- Secure authentication
+- Patient authorization
+- BAA-supported infrastructure
+- Authorized FHIR/EHR integration
 
 ---
 
 # Disclaimer
 
-**Project Compass is a hackathon prototype and is not a medical device or clinical decision-support system.**
+Project Compass is a hackathon prototype.
 
-All patient information shown in the application is synthetic.
+It does not:
 
-Navigation Priority is an explainable demonstration rules engine and has not been clinically validated.
+- Diagnose cancer
+- Recommend treatment
+- Recommend medication
+- Predict hospitalization
+- Replace clinicians
+- Replace navigators
 
-The prototype does not provide diagnosis, treatment recommendations, medication recommendations, or emergency medical guidance.
+Navigation Priority is an explainable prototype rules engine and has not been clinically validated.
 
 ---
 
-## Project Compass
+# Project Compass
 
 **Help fewer patients fall through the gaps.**
 
-*Every cancer journey is different. But no patient should have to navigate the gaps alone.*
+_Every cancer journey is different. But no patient should have to navigate the gaps alone._
 
 **Patient journey → Care gap → Early visibility → Human action → Better coordinated care**
