@@ -48,14 +48,14 @@ The login interface includes one-click demo account access for presentation spee
 ### Patient
 
 ```text
-Manisha Patel
+Manisha Johnson
 manisha@compass.demo
 ```
 
 ### Caregiver
 
 ```text
-Danielle Patel
+Danielle Johnson
 danielle@compass.demo
 ```
 
