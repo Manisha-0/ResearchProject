@@ -256,8 +256,8 @@ Example:
 
 ```ts
 submittedBy: {
-  id: "danielle-patel",
-  name: "Danielle Patel",
+  id: "danielle-johnson",
+  name: "Danielle Johnson",
   role: "caregiver",
 }
 ```
