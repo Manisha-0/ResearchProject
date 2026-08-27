@@ -23,7 +23,7 @@ export function CareJourney({ journey }: { journey: JourneyItem[] }) {
         {journey.map((item, index) => (
           <div key={item.id} className="relative flex gap-4 pb-7 last:pb-0">
             {index !== journey.length - 1 && (
-              <div className="absolute left-[15px] top-8 h-[calc(100%-1rem)] w-px bg-border" />
+              <div className="absolute left-3.75 top-8 h-[calc(100%-1rem)] w-px bg-border" />
             )}
 
             <JourneyIcon status={item.status} />

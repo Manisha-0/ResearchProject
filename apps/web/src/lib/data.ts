@@ -55,7 +55,7 @@ export const manisha: Patient = {
 
       title: "Chemotherapy — Cycle 2",
 
-      date: "August 26, 2026",
+      date: "August 28, 2026",
 
       time: "10:30 AM",
 
