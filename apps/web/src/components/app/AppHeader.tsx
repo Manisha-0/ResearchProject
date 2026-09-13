@@ -70,10 +70,6 @@ export function AppHeader({
         </Link>
 
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden rounded-full bg-gold-tint px-3 py-1.5 text-xs font-semibold text-navy-deep lg:inline-flex">
-            Demo · Synthetic
-          </span>
-
           {user && (
             <div className="hidden text-right sm:block">
               <p className="max-w-55 truncate text-sm font-semibold text-ink">

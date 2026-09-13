@@ -1,8 +1,24 @@
-import { Check, Circle, Clock3 } from "lucide-react";
+import {
+  Ban,
+  Check,
+  Circle,
+  Clock3,
+} from "lucide-react";
 
-import type { JourneyItem } from "@/lib/types";
+import type {
+  JourneyItemStatus,
+  PatientJourneyItem,
+} from "@/types/patient";
 
-export function CareJourney({ journey }: { journey: JourneyItem[] }) {
+export function CareJourney({
+  journey,
+}: {
+  journey: PatientJourneyItem[];
+}) {
+  const orderedJourney = [
+    ...journey,
+  ].sort(compareJourneyItems);
+
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div>
@@ -15,38 +31,82 @@ export function CareJourney({ journey }: { journey: JourneyItem[] }) {
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-ink-soft">
-          Compass keeps earlier milestones and what comes next in one timeline.
+          Compass keeps earlier milestones
+          and what comes next in one
+          timeline.
         </p>
       </div>
 
       <div className="mt-7">
-        {journey.map((item, index) => (
-          <div key={item.id} className="relative flex gap-4 pb-7 last:pb-0">
-            {index !== journey.length - 1 && (
-              <div className="absolute left-3.75 top-8 h-[calc(100%-1rem)] w-px bg-border" />
-            )}
+        {orderedJourney.length === 0 ? (
+          <p className="text-sm text-ink-soft">
+            No care journey items are
+            available yet.
+          </p>
+        ) : (
+          orderedJourney.map(
+            (item, index) => (
+              <div
+                key={item.id}
+                className="relative flex gap-4 pb-7 last:pb-0"
+              >
+                {index !==
+                  orderedJourney.length -
+                    1 && (
+                  <div className="absolute left-3.75 top-8 h-[calc(100%-1rem)] w-px bg-border" />
+                )}
 
-            <JourneyIcon status={item.status} />
+                <JourneyIcon
+                  status={item.status}
+                />
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-ink">{item.title}</h3>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-ink">
+                      {item.title}
+                    </h3>
 
-                <span className="text-xs text-ink-soft">{item.date}</span>
+                    <span className="text-xs text-ink-soft">
+                      {formatJourneyDate(
+                        item,
+                      )}
+                    </span>
+                  </div>
+
+                  {item.description && (
+                    <p className="mt-1 text-sm leading-6 text-ink-soft">
+                      {
+                        item.description
+                      }
+                    </p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="inline-flex rounded-full bg-surface-soft px-2.5 py-1 text-xs font-medium text-ink-soft">
+                      {formatStatus(
+                        item.item_type,
+                      )}
+                    </span>
+
+                    {item.status ===
+                      "in_progress" && (
+                      <span className="inline-flex rounded-full bg-gold-tint px-2.5 py-1 text-xs font-semibold text-navy-deep">
+                        Current stage
+                      </span>
+                    )}
+
+                    {item.status ===
+                      "cancelled" && (
+                      <span className="inline-flex rounded-full bg-priority-high-tint px-2.5 py-1 text-xs font-semibold text-priority-high">
+                        Cancelled
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-
-              <p className="mt-1 text-sm leading-6 text-ink-soft">
-                {item.detail}
-              </p>
-
-              {item.status === "current" && (
-                <span className="mt-2 inline-flex rounded-full bg-gold-tint px-2.5 py-1 text-xs font-semibold text-navy-deep">
-                  Current stage
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+            ),
+          )
+        )}
       </div>
     </section>
   );
@@ -55,7 +115,7 @@ export function CareJourney({ journey }: { journey: JourneyItem[] }) {
 function JourneyIcon({
   status,
 }: {
-  status: "completed" | "current" | "upcoming";
+  status: JourneyItemStatus;
 }) {
   if (status === "completed") {
     return (
@@ -65,10 +125,18 @@ function JourneyIcon({
     );
   }
 
-  if (status === "current") {
+  if (status === "in_progress") {
     return (
       <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-tint">
         <Clock3 className="h-4 w-4 text-navy" />
+      </div>
+    );
+  }
+
+  if (status === "cancelled") {
+    return (
+      <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-priority-high-tint">
+        <Ban className="h-4 w-4 text-priority-high" />
       </div>
     );
   }
@@ -78,4 +146,76 @@ function JourneyIcon({
       <Circle className="h-4 w-4 text-ink-soft" />
     </div>
   );
+}
+
+function compareJourneyItems(
+  first: PatientJourneyItem,
+  second: PatientJourneyItem,
+) {
+  const firstDate =
+    getJourneyDate(first);
+
+  const secondDate =
+    getJourneyDate(second);
+
+  if (!firstDate && !secondDate) {
+    return 0;
+  }
+
+  if (!firstDate) {
+    return 1;
+  }
+
+  if (!secondDate) {
+    return -1;
+  }
+
+  return (
+    firstDate.getTime() -
+    secondDate.getTime()
+  );
+}
+
+function getJourneyDate(
+  item: PatientJourneyItem,
+) {
+  const value =
+    item.scheduled_at ??
+    item.completed_at ??
+    item.appointment
+      ?.scheduled_start;
+
+  return value
+    ? new Date(value)
+    : null;
+}
+
+function formatJourneyDate(
+  item: PatientJourneyItem,
+) {
+  const date =
+    getJourneyDate(item);
+
+  if (!date) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    },
+  ).format(date);
+}
+
+function formatStatus(
+  value: string,
+) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
 }

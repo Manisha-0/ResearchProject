@@ -1,44 +1,132 @@
 "use client";
 
+import {
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+} from "lucide-react";
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+
+import { submitMyCheckIn } from "@/lib/patient-api";
 
 import type {
-  MedicationStatus,
-  SymptomSeverity,
-  TransportStatus,
-} from "@/lib/types";
+  CheckInResponse,
+} from "@/types/patient";
 
-import { useCompassStore } from "@/store/compass-store";
+type SymptomLevel =
+  | "none"
+  | "mild"
+  | "moderate"
+  | "severe";
+
+type TransportStatus =
+  | "confirmed"
+  | "not_sure"
+  | "unavailable";
+
+type MedicationStatus =
+  | "on_track"
+  | "having_trouble";
 
 type CheckInFormProps = {
-  patientId: string;
+  onSubmitted?: (
+    checkIn: CheckInResponse,
+  ) => void;
 };
 
-export function CheckInForm({ patientId }: CheckInFormProps) {
-  const submitCheckIn = useCompassStore((state) => state.submitCheckIn);
+export function CheckInForm({
+  onSubmitted,
+}: CheckInFormProps) {
+  const [symptomLevel, setSymptomLevel] =
+    useState<SymptomLevel>("none");
 
-  const [nausea, setNausea] = useState<SymptomSeverity>("none");
+  const [
+    transportStatus,
+    setTransportStatus,
+  ] =
+    useState<TransportStatus>(
+      "confirmed",
+    );
 
-  const [transportStatus, setTransportStatus] =
-    useState<TransportStatus>("confirmed");
+  const [
+    medicationStatus,
+    setMedicationStatus,
+  ] =
+    useState<MedicationStatus>(
+      "on_track",
+    );
 
-  const [medicationStatus, setMedicationStatus] =
-    useState<MedicationStatus>("on_track");
+  const [
+    financialConcern,
+    setFinancialConcern,
+  ] = useState(false);
 
-  const [note, setNote] = useState("");
+  const [
+    requestedHelp,
+    setRequestedHelp,
+  ] = useState(false);
 
-  const [submitted, setSubmitted] = useState(false);
+  const [note, setNote] =
+    useState("");
 
-  function handleSubmit() {
-    submitCheckIn(patientId, {
-      nausea,
-      transportStatus,
-      medicationStatus,
-      note,
-    });
+  const [submitted, setSubmitted] =
+    useState(false);
 
-    setSubmitted(true);
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  async function handleSubmit() {
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const checkIn =
+        await submitMyCheckIn({
+          symptom_severity:
+            getSymptomSeverity(
+              symptomLevel,
+            ),
+
+          transportation_confirmed:
+            getTransportationValue(
+              transportStatus,
+            ),
+
+          medication_access_issue:
+            medicationStatus ===
+            "having_trouble",
+
+          financial_concern:
+            financialConcern,
+
+          requested_help:
+            requestedHelp,
+
+          free_text:
+            note.trim().length > 0
+              ? note.trim()
+              : null,
+        });
+
+      setSubmitted(true);
+
+      onSubmitted?.(checkIn);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to submit your check-in.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -48,16 +136,27 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
           <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-priority-low" />
 
           <div>
-            <h2 className="font-semibold text-ink">Thank you, Manisha.</h2>
+            <h2 className="font-semibold text-ink">
+              Thank you.
+            </h2>
 
             <p className="mt-2 text-sm leading-6 text-ink-soft">
-              Your care navigation team can now see your update.
+              Your care navigation team can now
+              see your update.
             </p>
 
-            {transportStatus !== "confirmed" && (
+            {transportStatus !==
+              "confirmed" && (
               <p className="mt-3 text-sm font-medium text-navy">
-                We noticed you may need help getting to tomorrow&apos;s
-                appointment.
+                We noticed you may need help
+                with transportation.
+              </p>
+            )}
+
+            {requestedHelp && (
+              <p className="mt-2 text-sm font-medium text-navy">
+                Your request for navigator
+                support was included.
               </p>
             )}
           </div>
@@ -78,55 +177,92 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-ink-soft">
-          This takes about a minute and helps your care navigation team
-          understand where you may need support.
+          This takes about a minute and
+          helps your care navigation team
+          understand where you may need
+          support.
         </p>
       </div>
 
       <div className="mt-7 space-y-8">
         <Question
-          title="How is your nausea?"
+          title="How severe are your symptoms today?"
           options={[
             {
               label: "None",
-              active: nausea === "none",
-              onClick: () => setNausea("none"),
+              active:
+                symptomLevel ===
+                "none",
+              onClick: () =>
+                setSymptomLevel(
+                  "none",
+                ),
             },
             {
               label: "Mild",
-              active: nausea === "mild",
-              onClick: () => setNausea("mild"),
+              active:
+                symptomLevel ===
+                "mild",
+              onClick: () =>
+                setSymptomLevel(
+                  "mild",
+                ),
             },
             {
               label: "Moderate",
-              active: nausea === "moderate",
-              onClick: () => setNausea("moderate"),
+              active:
+                symptomLevel ===
+                "moderate",
+              onClick: () =>
+                setSymptomLevel(
+                  "moderate",
+                ),
             },
             {
               label: "Severe",
-              active: nausea === "severe",
-              onClick: () => setNausea("severe"),
+              active:
+                symptomLevel ===
+                "severe",
+              onClick: () =>
+                setSymptomLevel(
+                  "severe",
+                ),
             },
           ]}
         />
 
         <Question
-          title="Do you have transportation for tomorrow?"
+          title="Do you have transportation for your next appointment?"
           options={[
             {
               label: "Yes",
-              active: transportStatus === "confirmed",
-              onClick: () => setTransportStatus("confirmed"),
+              active:
+                transportStatus ===
+                "confirmed",
+              onClick: () =>
+                setTransportStatus(
+                  "confirmed",
+                ),
             },
             {
               label: "Not sure",
-              active: transportStatus === "not_sure",
-              onClick: () => setTransportStatus("not_sure"),
+              active:
+                transportStatus ===
+                "not_sure",
+              onClick: () =>
+                setTransportStatus(
+                  "not_sure",
+                ),
             },
             {
               label: "No",
-              active: transportStatus === "unavailable",
-              onClick: () => setTransportStatus("unavailable"),
+              active:
+                transportStatus ===
+                "unavailable",
+              onClick: () =>
+                setTransportStatus(
+                  "unavailable",
+                ),
             },
           ]}
         />
@@ -136,15 +272,42 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
           options={[
             {
               label: "Yes",
-              active: medicationStatus === "on_track",
-              onClick: () => setMedicationStatus("on_track"),
+              active:
+                medicationStatus ===
+                "on_track",
+              onClick: () =>
+                setMedicationStatus(
+                  "on_track",
+                ),
             },
             {
-              label: "I'm having trouble",
-              active: medicationStatus === "having_trouble",
-              onClick: () => setMedicationStatus("having_trouble"),
+              label:
+                "I'm having trouble",
+              active:
+                medicationStatus ===
+                "having_trouble",
+              onClick: () =>
+                setMedicationStatus(
+                  "having_trouble",
+                ),
             },
           ]}
+        />
+
+        <YesNoQuestion
+          title="Are costs or financial concerns making care harder right now?"
+          value={financialConcern}
+          onChange={
+            setFinancialConcern
+          }
+        />
+
+        <YesNoQuestion
+          title="Would you like your navigator to contact you for help?"
+          value={requestedHelp}
+          onChange={
+            setRequestedHelp
+          }
         />
 
         <div>
@@ -152,15 +315,21 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
             htmlFor="note"
             className="block text-sm font-semibold text-ink"
           >
-            Anything else you&apos;d like your navigator to know?
+            Anything else you&apos;d like
+            your navigator to know?
           </label>
 
           <textarea
             id="note"
             value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="For example: I'm worried I won't have a ride tomorrow."
+            onChange={(event) =>
+              setNote(
+                event.target.value,
+              )
+            }
+            placeholder="For example: I'm worried I won't have a ride to my appointment."
             rows={4}
+            maxLength={3000}
             className="
               mt-3
               w-full
@@ -181,15 +350,36 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
               focus:ring-navy/10
             "
           />
+
+          <p className="mt-2 text-right text-xs text-ink-soft">
+            {note.length} / 3000
+          </p>
         </div>
       </div>
 
+      {error && (
+        <div className="mt-6 flex items-start gap-2 rounded-xl bg-priority-high-tint p-4">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-priority-high" />
+
+          <p className="text-sm text-priority-high">
+            {error}
+          </p>
+        </div>
+      )}
+
       <button
         type="button"
-        onClick={handleSubmit}
+        disabled={isSubmitting}
+        onClick={() =>
+          void handleSubmit()
+        }
         className="
           mt-8
+          flex
           w-full
+          items-center
+          justify-center
+          gap-2
           rounded-xl
           bg-navy
           px-5
@@ -203,9 +393,17 @@ export function CheckInForm({ patientId }: CheckInFormProps) {
           focus-visible:ring-2
           focus-visible:ring-gold
           focus-visible:ring-offset-2
+          disabled:cursor-not-allowed
+          disabled:opacity-60
         "
       >
-        Submit check-in
+        {isSubmitting && (
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+        )}
+
+        {isSubmitting
+          ? "Submitting..."
+          : "Submit check-in"}
       </button>
     </section>
   );
@@ -222,17 +420,24 @@ type QuestionProps = {
   options: QuestionOption[];
 };
 
-function Question({ title, options }: QuestionProps) {
+function Question({
+  title,
+  options,
+}: QuestionProps) {
   return (
     <div>
-      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="text-sm font-semibold text-ink">
+        {title}
+      </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {options.map((option) => (
           <button
             key={option.label}
             type="button"
-            onClick={option.onClick}
+            onClick={
+              option.onClick
+            }
             className={[
               "rounded-full border px-4 py-2.5 text-sm font-medium transition",
               option.active
@@ -246,4 +451,69 @@ function Question({ title, options }: QuestionProps) {
       </div>
     </div>
   );
+}
+
+function YesNoQuestion({
+  title,
+  value,
+  onChange,
+}: {
+  title: string;
+  value: boolean;
+  onChange: (
+    value: boolean,
+  ) => void;
+}) {
+  return (
+    <Question
+      title={title}
+      options={[
+        {
+          label: "No",
+          active: !value,
+          onClick: () =>
+            onChange(false),
+        },
+        {
+          label: "Yes",
+          active: value,
+          onClick: () =>
+            onChange(true),
+        },
+      ]}
+    />
+  );
+}
+
+function getSymptomSeverity(
+  level: SymptomLevel,
+) {
+  switch (level) {
+    case "none":
+      return 0;
+
+    case "mild":
+      return 3;
+
+    case "moderate":
+      return 6;
+
+    case "severe":
+      return 8;
+  }
+}
+
+function getTransportationValue(
+  status: TransportStatus,
+): boolean | null {
+  switch (status) {
+    case "confirmed":
+      return true;
+
+    case "not_sure":
+      return null;
+
+    case "unavailable":
+      return false;
+  }
 }

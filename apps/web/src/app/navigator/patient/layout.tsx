@@ -16,7 +16,7 @@ export default function PatientLayout({
   return (
     <RoleGuard
       allowedRoles={[
-        "patient",
+        "navigator",
       ]}
     >
       {children}
