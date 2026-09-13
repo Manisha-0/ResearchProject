@@ -11,67 +11,128 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCompassStore } from "@/store/compass-store";
+
+import { getHomeRouteForRole } from "@/lib/auth-routing";
+import { useAuthStore } from "@/store/auth-store";
 
 type DemoAccount = "patient" | "caregiver" | "navigator";
 
-const accounts = {
+const accounts: Record<
+  DemoAccount,
+  {
+    email: string;
+    password: string;
+  }
+> = {
   patient: {
     email: "manisha@compass.demo",
-    password: "demo123",
+    password: "Demo123!",
   },
 
   caregiver: {
     email: "danielle@compass.demo",
-    password: "demo123",
+    password: "Demo123!",
   },
 
   navigator: {
     email: "james@compass.demo",
-    password: "demo123",
+    password: "Demo123!",
   },
 };
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const signIn = useCompassStore((state) => state.signIn);
+  const loginUser = useAuthStore(
+    (state) => state.loginUser
+  );
+
+  const isLoading = useAuthStore(
+    (state) => state.isLoading
+  );
+
+  const storeError = useAuthStore(
+    (state) => state.error
+  );
+
+  const clearError = useAuthStore(
+    (state) => state.clearError
+  );
 
   const [email, setEmail] = useState("");
 
   const [password, setPassword] = useState("");
 
-  const [error, setError] = useState("");
+  const [demoLoading, setDemoLoading] =
+    useState<DemoAccount | null>(null);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
-    setError("");
+    clearError();
 
-    const result = signIn(email, password);
+    const normalizedEmail = email
+      .trim()
+      .toLowerCase();
 
-    if (!result.success) {
-      setError(result.error);
+    if (!normalizedEmail) {
       return;
     }
 
-    router.push(result.redirectTo);
+    if (!password) {
+      return;
+    }
+
+    try {
+      const user = await loginUser(
+        normalizedEmail,
+        password
+      );
+
+      const destination =
+        getHomeRouteForRole(user.role);
+
+      router.replace(destination);
+    } catch {
+      // The auth store already exposes the
+      // backend error through state.error.
+    }
   }
 
-  function signInWithDemoAccount(role: DemoAccount) {
-    setError("");
+  async function signInWithDemoAccount(
+    role: DemoAccount
+  ) {
+    clearError();
+
+    setDemoLoading(role);
 
     const account = accounts[role];
 
-    const result = signIn(account.email, account.password);
+    setEmail(account.email);
+    setPassword(account.password);
 
-    if (!result.success) {
-      setError(result.error);
-      return;
+    try {
+      const user = await loginUser(
+        account.email,
+        account.password
+      );
+
+      const destination =
+        getHomeRouteForRole(user.role);
+
+      router.replace(destination);
+    } catch {
+      // The auth store already exposes the
+      // backend error through state.error.
+    } finally {
+      setDemoLoading(null);
     }
-
-    router.push(result.redirectTo);
   }
+
+  const formDisabled =
+    isLoading || demoLoading !== null;
 
   return (
     <main className="min-h-screen bg-surface-soft">
@@ -98,18 +159,33 @@ export default function LoginPage() {
             relationship.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-7">
-            <label htmlFor="email" className="text-sm font-semibold text-ink">
+          <form
+            onSubmit={handleSubmit}
+            className="mt-7"
+          >
+            <label
+              htmlFor="email"
+              className="text-sm font-semibold text-ink"
+            >
               Email
             </label>
 
             <input
               id="email"
               type="email"
+              autoComplete="email"
+              required
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              disabled={formDisabled}
+              onChange={(event) => {
+                setEmail(event.target.value);
+
+                if (storeError) {
+                  clearError();
+                }
+              }}
               placeholder="name@example.com"
-              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10"
+              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70"
             />
 
             <label
@@ -122,21 +198,38 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
+              autoComplete="current-password"
+              required
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              disabled={formDisabled}
+              onChange={(event) => {
+                setPassword(event.target.value);
+
+                if (storeError) {
+                  clearError();
+                }
+              }}
               placeholder="••••••••"
-              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10"
+              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70"
             />
 
-            {error && (
-              <p className="mt-3 text-sm text-priority-high">{error}</p>
+            {storeError && (
+              <p
+                role="alert"
+                className="mt-3 text-sm text-priority-high"
+              >
+                {storeError}
+              </p>
             )}
 
             <button
               type="submit"
-              className="mt-6 w-full rounded-xl bg-navy px-5 py-3.5 font-semibold text-white transition hover:bg-navy-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
+              disabled={formDisabled}
+              className="mt-6 w-full rounded-xl bg-navy px-5 py-3.5 font-semibold text-white transition hover:bg-navy-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Sign in
+              {isLoading && demoLoading === null
+                ? "Signing in..."
+                : "Sign in"}
             </button>
           </form>
 
@@ -146,7 +239,7 @@ export default function LoginPage() {
             </p>
 
             <p className="mt-2 text-sm leading-6 text-ink-soft">
-              For the demo, enter any workspace instantly.
+              Sign in using one of the synthetic Compass demo accounts.
             </p>
 
             <div className="mt-4 grid gap-3">
@@ -154,21 +247,45 @@ export default function LoginPage() {
                 icon={<UserRound />}
                 title="Patient"
                 description="Continue as Manisha"
-                onClick={() => signInWithDemoAccount("patient")}
+                loading={
+                  demoLoading === "patient"
+                }
+                disabled={formDisabled}
+                onClick={() =>
+                  signInWithDemoAccount(
+                    "patient"
+                  )
+                }
               />
 
               <DemoButton
                 icon={<HeartHandshake />}
                 title="Caregiver"
                 description="Continue as Danielle"
-                onClick={() => signInWithDemoAccount("caregiver")}
+                loading={
+                  demoLoading === "caregiver"
+                }
+                disabled={formDisabled}
+                onClick={() =>
+                  signInWithDemoAccount(
+                    "caregiver"
+                  )
+                }
               />
 
               <DemoButton
                 icon={<Stethoscope />}
                 title="Navigator"
                 description="Continue as James"
-                onClick={() => signInWithDemoAccount("navigator")}
+                loading={
+                  demoLoading === "navigator"
+                }
+                disabled={formDisabled}
+                onClick={() =>
+                  signInWithDemoAccount(
+                    "navigator"
+                  )
+                }
               />
             </div>
 
@@ -176,9 +293,9 @@ export default function LoginPage() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
 
               <p>
-                Demo authentication only. Production Compass would use
-                health-system identity, secure sessions, and server-enforced
-                role-based access.
+                Compass uses synthetic demo accounts. Authentication,
+                role enforcement, patient assignments, and caregiver
+                permissions are validated by the FastAPI backend.
               </p>
             </div>
           </div>
@@ -192,32 +309,45 @@ function DemoButton({
   icon,
   title,
   description,
+  loading,
+  disabled,
   onClick,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  loading: boolean;
+  disabled: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-full items-center gap-4 rounded-xl border border-border bg-surface-soft p-4 text-left transition hover:border-navy/30 hover:bg-navy-tint/40"
+      disabled={disabled}
+      className="group flex w-full items-center gap-4 rounded-xl border border-border bg-surface-soft p-4 text-left transition hover:border-navy/30 hover:bg-navy-tint/40 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-navy shadow-sm [&>svg]:h-5 [&>svg]:w-5">
         {icon}
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="text-sm font-semibold text-ink">
+          {title}
+        </p>
 
-        <p className="mt-1 text-xs text-ink-soft">{description}</p>
+        <p className="mt-1 text-xs text-ink-soft">
+          {loading
+            ? "Signing in..."
+            : description}
+        </p>
       </div>
 
-      <span className="text-sm font-semibold text-navy opacity-0 transition group-hover:opacity-100">
-        Enter →
-      </span>
+      {!loading && (
+        <span className="text-sm font-semibold text-navy opacity-0 transition group-hover:opacity-100">
+          Enter →
+        </span>
+      )}
     </button>
   );
 }

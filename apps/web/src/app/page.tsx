@@ -100,7 +100,7 @@ function Feature({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-6">
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-gold">
         {icon}
       </div>

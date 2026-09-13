@@ -3,39 +3,69 @@
 import Link from "next/link";
 import { LogOut, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+import { useAuthStore } from "@/store/auth-store";
 import { useCompassStore } from "@/store/compass-store";
 
 type AppHeaderProps = {
   showReset?: boolean;
 };
 
-export function AppHeader({ showReset = false }: AppHeaderProps) {
+export function AppHeader({
+  showReset = false,
+}: AppHeaderProps) {
   const router = useRouter();
 
-  const session = useCompassStore((state) => state.session);
+  const user = useAuthStore(
+    (state) => state.user
+  );
 
-  const signOut = useCompassStore((state) => state.signOut);
+  const logout = useAuthStore(
+    (state) => state.logout
+  );
 
-  const resetDemo = useCompassStore((state) => state.resetDemo);
+  const resetDemo = useCompassStore(
+    (state) => state.resetDemo
+  );
 
   function handleSignOut() {
-    signOut();
+    logout();
 
-    router.push("/");
+    router.replace("/login");
+  }
+
+  function formatRole(
+    role: string
+  ) {
+    return role
+      .split("_")
+      .map(
+        (part) =>
+          part.charAt(0).toUpperCase() +
+          part.slice(1)
+      )
+      .join(" ");
   }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-8">
-        <Link href="/" className="flex shrink-0 items-center gap-3">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-3"
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy font-bold text-white">
             C
           </div>
 
           <div className="hidden sm:block">
-            <p className="font-semibold text-navy">Compass</p>
+            <p className="font-semibold text-navy">
+              Compass
+            </p>
 
-            <p className="text-xs text-ink-soft">Cancer care navigation</p>
+            <p className="text-xs text-ink-soft">
+              Cancer care navigation
+            </p>
           </div>
         </Link>
 
@@ -44,11 +74,15 @@ export function AppHeader({ showReset = false }: AppHeaderProps) {
             Demo · Synthetic
           </span>
 
-          {session && (
+          {user && (
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-ink">{session.name}</p>
+              <p className="max-w-55 truncate text-sm font-semibold text-ink">
+                {user.email}
+              </p>
 
-              <p className="text-xs capitalize text-ink-soft">{session.role}</p>
+              <p className="text-xs text-ink-soft">
+                {formatRole(user.role)}
+              </p>
             </div>
           )}
 
@@ -56,14 +90,14 @@ export function AppHeader({ showReset = false }: AppHeaderProps) {
             <button
               type="button"
               onClick={resetDemo}
-              title="Reset demo"
+              title="Reset demo data"
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:border-navy/30 hover:text-navy"
             >
               <RotateCcw className="h-4 w-4" />
             </button>
           )}
 
-          {session && (
+          {user && (
             <button
               type="button"
               onClick={handleSignOut}
@@ -71,7 +105,9 @@ export function AppHeader({ showReset = false }: AppHeaderProps) {
             >
               <LogOut className="h-4 w-4" />
 
-              <span className="hidden sm:inline">Sign out</span>
+              <span className="hidden sm:inline">
+                Sign out
+              </span>
             </button>
           )}
         </div>
