@@ -10,6 +10,15 @@ from app.routers.auth import router as auth_router
 from app.routers.patients import (
     router as patients_router,
 )
+from app.routers.caregivers import (
+    router as caregivers_router,
+)
+from app.routers.patient_caregivers import (
+    router as patient_caregivers_router,
+)
+from app.routers.caregiver_portal import (
+    router as caregiver_portal_router,
+)
 
 app = FastAPI(
     title=settings.app_name,
@@ -19,6 +28,13 @@ app = FastAPI(
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(patients_router)
+app.include_router(caregivers_router)
+app.include_router(
+    patient_caregivers_router
+)
+app.include_router(
+    caregiver_portal_router
+)
 
 app.add_middleware(
     CORSMiddleware,

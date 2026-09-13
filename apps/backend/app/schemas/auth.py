@@ -58,3 +58,21 @@ class PatientActivateRequest(BaseModel):
     token: str
     date_of_birth: date
     password: str
+
+class CaregiverActivationValidateRequest(
+    BaseModel
+):
+    token: str
+
+
+class CaregiverActivationValidateResponse(
+    BaseModel
+):
+    valid: bool
+    email: EmailStr
+    first_name: str
+
+
+class CaregiverActivateRequest(BaseModel):
+    token: str
+    password: str

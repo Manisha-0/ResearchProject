@@ -16,9 +16,12 @@ from app.core.security import (
     create_access_token,
     verify_password_or_dummy,
 )
-from app.models.enums import UserStatus
+from app.models.enums import CaregiverAccessStatus, UserStatus
 from app.models.user import User
 from app.schemas.auth import (
+    CaregiverActivateRequest,
+    CaregiverActivationValidateRequest,
+    CaregiverActivationValidateResponse,
     CurrentUserResponse,
     LoginRequest,
     TokenResponse,
@@ -61,7 +64,10 @@ from app.schemas.auth import (
     PatientActivationValidateResponse,
     TokenResponse,
 )
-
+from app.models.caregiver import (
+    CaregiverPatientAccess,
+    CaregiverProfile,
+)
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
@@ -506,6 +512,186 @@ def activate_patient(
         resource_id=str(
             patient_profile.id
         ),
+        metadata_json={
+            "invitation_id": str(
+                invitation.id
+            ),
+            "purpose": (
+                invitation.purpose.value
+            ),
+        },
+    )
+
+    db.commit()
+
+    return AccountActivateResponse(
+        message=(
+            "Account activated successfully. "
+            "You can now log in."
+        ),
+    )
+
+@router.post(
+    "/caregiver-activate/validate",
+    response_model=(
+        CaregiverActivationValidateResponse
+    ),
+)
+def validate_caregiver_activation(
+    payload: CaregiverActivationValidateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+) -> CaregiverActivationValidateResponse:
+    invitation = get_valid_invitation(
+        db,
+        raw_token=payload.token,
+        purpose=(
+            InvitationPurpose
+            .CAREGIVER_ACTIVATION
+        ),
+    )
+
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invitation is invalid "
+                "or has expired."
+            ),
+        )
+
+    user = db.get(
+        User,
+        invitation.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation is invalid.",
+        )
+
+    profile = db.scalar(
+        select(CaregiverProfile).where(
+            CaregiverProfile.user_id
+            == user.id
+        )
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Caregiver profile not found.",
+        )
+
+    return (
+        CaregiverActivationValidateResponse(
+            valid=True,
+            email=user.email,
+            first_name=profile.first_name,
+        )
+    )
+
+@router.post(
+    "/caregiver-activate",
+    response_model=AccountActivateResponse,
+)
+def activate_caregiver(
+    payload: CaregiverActivateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+) -> AccountActivateResponse:
+    invitation = get_valid_invitation(
+        db,
+        raw_token=payload.token,
+        purpose=(
+            InvitationPurpose
+            .CAREGIVER_ACTIVATION
+        ),
+    )
+
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invitation is invalid "
+                "or has expired."
+            ),
+        )
+
+    user = db.get(
+        User,
+        invitation.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation is invalid.",
+        )
+
+    if user.status not in {
+        UserStatus.PENDING,
+        UserStatus.ACTIVE,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This account cannot "
+                "be activated."
+            ),
+        )
+
+    try:
+        validate_password_strength(
+            payload.password
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            ),
+            detail=str(exc),
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+
+    if user.status == UserStatus.PENDING:
+        user.password_hash = hash_password(
+            payload.password
+        )
+        user.email_verified_at = now
+        user.status = UserStatus.ACTIVE
+
+    invitation.used_at = now
+
+    access_rows = db.scalars(
+        select(CaregiverPatientAccess)
+        .where(
+            CaregiverPatientAccess
+            .caregiver_user_id
+            == user.id,
+            CaregiverPatientAccess.status
+            == CaregiverAccessStatus.INVITED,
+        )
+    ).all()
+
+    for access in access_rows:
+        access.status = (
+            CaregiverAccessStatus.ACTIVE
+        )
+
+    write_audit_log(
+        db,
+        organization_id=user.organization_id,
+        actor_user_id=user.id,
+        action="ACCOUNT_ACTIVATED",
+        resource_type="caregiver",
+        resource_id=str(user.id),
         metadata_json={
             "invitation_id": str(
                 invitation.id
