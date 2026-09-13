@@ -48,6 +48,19 @@ from app.schemas.auth import (
 from app.services.invitation_service import (
     get_valid_invitation,
 )
+from app.models.patient import PatientProfile
+from app.schemas.auth import (
+    AccountActivateRequest,
+    AccountActivateResponse,
+    CurrentUserResponse,
+    InvitationValidateRequest,
+    InvitationValidateResponse,
+    LoginRequest,
+    PatientActivateRequest,
+    PatientActivationValidateRequest,
+    PatientActivationValidateResponse,
+    TokenResponse,
+)
 
 router = APIRouter(
     prefix="/auth",
@@ -281,6 +294,218 @@ def activate_account(
         action="ACCOUNT_ACTIVATED",
         resource_type="user",
         resource_id=str(user.id),
+        metadata_json={
+            "invitation_id": str(
+                invitation.id
+            ),
+            "purpose": (
+                invitation.purpose.value
+            ),
+        },
+    )
+
+    db.commit()
+
+    return AccountActivateResponse(
+        message=(
+            "Account activated successfully. "
+            "You can now log in."
+        ),
+    )
+
+@router.post(
+    "/patient-activate/validate",
+    response_model=(
+        PatientActivationValidateResponse
+    ),
+)
+def validate_patient_activation(
+    payload: PatientActivationValidateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+) -> PatientActivationValidateResponse:
+    invitation = get_valid_invitation(
+        db,
+        raw_token=payload.token,
+        purpose=(
+            InvitationPurpose
+            .PATIENT_ACTIVATION
+        ),
+    )
+
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invitation is invalid "
+                "or has expired."
+            ),
+        )
+
+    user = db.get(
+        User,
+        invitation.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation is invalid.",
+        )
+
+    if user.status != UserStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This account cannot "
+                "be activated."
+            ),
+        )
+
+    patient_profile = db.scalar(
+        select(PatientProfile).where(
+            PatientProfile.user_id
+            == user.id
+        )
+    )
+
+    if patient_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Patient profile not found.",
+        )
+
+    if (
+        patient_profile.date_of_birth
+        != payload.date_of_birth
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Unable to verify patient "
+                "information."
+            ),
+        )
+
+    return (
+        PatientActivationValidateResponse(
+            valid=True,
+            email=user.email,
+            first_name=(
+                patient_profile.first_name
+            ),
+        )
+    )
+
+@router.post(
+    "/patient-activate",
+    response_model=AccountActivateResponse,
+)
+def activate_patient(
+    payload: PatientActivateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+) -> AccountActivateResponse:
+    invitation = get_valid_invitation(
+        db,
+        raw_token=payload.token,
+        purpose=(
+            InvitationPurpose
+            .PATIENT_ACTIVATION
+        ),
+    )
+
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invitation is invalid "
+                "or has expired."
+            ),
+        )
+
+    user = db.get(
+        User,
+        invitation.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation is invalid.",
+        )
+
+    if user.status != UserStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This account cannot "
+                "be activated."
+            ),
+        )
+
+    patient_profile = db.scalar(
+        select(PatientProfile).where(
+            PatientProfile.user_id
+            == user.id
+        )
+    )
+
+    if patient_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Patient profile not found.",
+        )
+
+    if (
+        patient_profile.date_of_birth
+        != payload.date_of_birth
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Unable to verify patient "
+                "information."
+            ),
+        )
+
+    try:
+        validate_password_strength(
+            payload.password
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_422_UNPROCESSABLE_ENTITY
+            ),
+            detail=str(exc),
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+
+    user.password_hash = hash_password(
+        payload.password
+    )
+
+    user.email_verified_at = now
+    user.status = UserStatus.ACTIVE
+
+    invitation.used_at = now
+
+    write_audit_log(
+        db,
+        organization_id=user.organization_id,
+        actor_user_id=user.id,
+        patient_id=patient_profile.id,
+        action="ACCOUNT_ACTIVATED",
+        resource_type="patient",
+        resource_id=str(
+            patient_profile.id
+        ),
         metadata_json={
             "invitation_id": str(
                 invitation.id
