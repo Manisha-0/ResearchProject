@@ -1,81 +1,34 @@
 "use client";
 
+import type { SubmitEventHandler } from "react";
+
 import { useState } from "react";
-import {
-  ArrowLeft,
-  HeartHandshake,
-  LockKeyhole,
-  ShieldCheck,
-  Stethoscope,
-  UserRound,
-} from "lucide-react";
+
+import { ArrowLeft, LoaderCircle, LockKeyhole } from "lucide-react";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { getHomeRouteForRole } from "@/lib/auth-routing";
+
 import { useAuthStore } from "@/store/auth-store";
-
-type DemoAccount = "patient" | "caregiver" | "navigator";
-
-const accounts: Record<
-  DemoAccount,
-  {
-    email: string;
-    password: string;
-  }
-> = {
-  patient: {
-    email: "manisha@compass.demo",
-    password: "Demo123!",
-  },
-
-  caregiver: {
-    email: "danielle@compass.demo",
-    password: "Demo123!",
-  },
-
-  navigator: {
-    email: "james@compass.demo",
-    password: "Demo123!",
-  },
-};
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const loginUser = useAuthStore(
-    (state) => state.loginUser
-  );
-
-  const isLoading = useAuthStore(
-    (state) => state.isLoading
-  );
-
-  const storeError = useAuthStore(
-    (state) => state.error
-  );
-
-  const clearError = useAuthStore(
-    (state) => state.clearError
-  );
-
+  const loginUser = useAuthStore((state) => state.loginUser);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const storeError = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
   const [email, setEmail] = useState("");
-
   const [password, setPassword] = useState("");
 
-  const [demoLoading, setDemoLoading] =
-    useState<DemoAccount | null>(null);
-
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
 
     clearError();
 
-    const normalizedEmail = email
-      .trim()
-      .toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
       return;
@@ -86,53 +39,17 @@ export default function LoginPage() {
     }
 
     try {
-      const user = await loginUser(
-        normalizedEmail,
-        password
-      );
+      const user = await loginUser(normalizedEmail, password);
 
-      const destination =
-        getHomeRouteForRole(user.role);
+      const destination = getHomeRouteForRole(user.role);
 
       router.replace(destination);
     } catch {
-      // The auth store already exposes the
-      // backend error through state.error.
+      // The auth store already exposes
+      // the backend error through
+      // state.error.
     }
-  }
-
-  async function signInWithDemoAccount(
-    role: DemoAccount
-  ) {
-    clearError();
-
-    setDemoLoading(role);
-
-    const account = accounts[role];
-
-    setEmail(account.email);
-    setPassword(account.password);
-
-    try {
-      const user = await loginUser(
-        account.email,
-        account.password
-      );
-
-      const destination =
-        getHomeRouteForRole(user.role);
-
-      router.replace(destination);
-    } catch {
-      // The auth store already exposes the
-      // backend error through state.error.
-    } finally {
-      setDemoLoading(null);
-    }
-  }
-
-  const formDisabled =
-    isLoading || demoLoading !== null;
+  };
 
   return (
     <main className="min-h-screen bg-surface-soft">
@@ -159,14 +76,8 @@ export default function LoginPage() {
             relationship.
           </p>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-7"
-          >
-            <label
-              htmlFor="email"
-              className="text-sm font-semibold text-ink"
-            >
+          <form onSubmit={handleSubmit} className="mt-7">
+            <label htmlFor="email" className="text-sm font-semibold text-ink">
               Email
             </label>
 
@@ -176,7 +87,7 @@ export default function LoginPage() {
               autoComplete="email"
               required
               value={email}
-              disabled={formDisabled}
+              disabled={isLoading}
               onChange={(event) => {
                 setEmail(event.target.value);
 
@@ -201,7 +112,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               value={password}
-              disabled={formDisabled}
+              disabled={isLoading}
               onChange={(event) => {
                 setPassword(event.target.value);
 
@@ -214,25 +125,41 @@ export default function LoginPage() {
             />
 
             {storeError && (
-              <p
+              <div
                 role="alert"
-                className="mt-3 text-sm text-priority-high"
+                className="mt-4 rounded-xl bg-priority-high-tint px-4 py-3"
               >
-                {storeError}
-              </p>
+                <p className="text-sm text-priority-high">{storeError}</p>
+              </div>
             )}
 
             <button
               type="submit"
-              disabled={formDisabled}
-              className="mt-6 w-full rounded-xl bg-navy px-5 py-3.5 font-semibold text-white transition hover:bg-navy-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isLoading}
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3.5 font-semibold text-white transition hover:bg-navy-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading && demoLoading === null
-                ? "Signing in..."
-                : "Sign in"}
+              {isLoading ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
             </button>
           </form>
+
+          <div className="mt-6 border-t border-border pt-5">
+            <p className="text-center text-xs leading-5 text-ink-soft">
+              Access is limited to authorized Compass users.
+            </p>
+          </div>
         </div>
+
+        <p className="mx-auto mt-6 max-w-sm text-center text-xs leading-5 text-ink-soft">
+          Compass is a care navigation prototype using synthetic demonstration
+          data.
+        </p>
       </div>
     </main>
   );
