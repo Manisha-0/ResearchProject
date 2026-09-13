@@ -40,6 +40,12 @@ from app.routers.attention import (
 from app.routers.action_center import (
     router as action_center_router,
 )
+from app.routers.tasks import (
+    router as tasks_router,
+)
+from app.routers.navigator_tasks import (
+    router as navigator_tasks_router,
+)
 
 app = FastAPI(
     title=settings.app_name,
@@ -64,6 +70,10 @@ app.include_router(signals_router)
 app.include_router(attention_router)
 app.include_router(
     action_center_router
+)
+app.include_router(tasks_router)
+app.include_router(
+    navigator_tasks_router
 )
 
 app.add_middleware(

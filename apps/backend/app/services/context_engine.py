@@ -68,14 +68,24 @@ def upsert_navigation_need(
     due_at=None,
     signals: list[NavigationSignal],
 ) -> NavigationNeed:
+    """
+    Create or update a navigation need.
+
+    Behavior:
+    - Creates the need if it does not already exist.
+    - Updates descriptive/context fields when it already exists.
+    - Links supporting navigation signals without duplicates.
+    - A resolved need stays resolved when the engine sees only
+      the same historical evidence.
+    - A resolved need reopens only when genuinely new supporting
+      evidence is received.
+    """
+
     need = db.scalar(
         select(NavigationNeed).where(
-            NavigationNeed.patient_id
-            == patient_id,
-            NavigationNeed.need_type
-            == need_type,
-            NavigationNeed.context_key
-            == context_key,
+            NavigationNeed.patient_id == patient_id,
+            NavigationNeed.need_type == need_type,
+            NavigationNeed.context_key == context_key,
         )
     )
 
@@ -86,15 +96,9 @@ def upsert_navigation_need(
             context_key=context_key,
             title=title,
             explanation=explanation,
-            recommended_action=(
-                recommended_action
-            ),
-            attention_status=(
-                attention_status
-            ),
-            status=(
-                NavigationNeedStatus.OPEN
-            ),
+            recommended_action=recommended_action,
+            attention_status=attention_status,
+            status=NavigationNeedStatus.OPEN,
             due_at=due_at,
         )
 
@@ -102,53 +106,69 @@ def upsert_navigation_need(
         db.flush()
 
     else:
+        # Keep the descriptive/context information current.
         need.title = title
         need.explanation = explanation
-        need.recommended_action = (
-            recommended_action
-        )
-        need.attention_status = (
-            attention_status
-        )
+        need.recommended_action = recommended_action
+        need.attention_status = attention_status
         need.due_at = due_at
 
+        # Find all signals that have already been associated
+        # with this need.
+        existing_signal_ids = set(
+            db.scalars(
+                select(
+                    NavigationNeedSignal.navigation_signal_id
+                ).where(
+                    NavigationNeedSignal.navigation_need_id
+                    == need.id
+                )
+            ).all()
+        )
+
+        # Signals currently supporting this evaluation.
+        incoming_signal_ids = {
+            signal.id
+            for signal in signals
+        }
+        has_new_evidence = bool(
+            incoming_signal_ids
+            - existing_signal_ids
+        )
+
+        # A resolved need should NOT reopen merely because the
+        # context engine evaluates the same historical signals.
+        #
+        # It reopens only when new evidence appears.
         if (
             need.status
             == NavigationNeedStatus.RESOLVED
+            and has_new_evidence
         ):
-            need.status = (
-                NavigationNeedStatus.OPEN
-            )
+            need.status = NavigationNeedStatus.OPEN
             need.resolved_at = None
 
     for signal in signals:
         existing_link = db.scalar(
-            select(
-                NavigationNeedSignal
-            ).where(
-                NavigationNeedSignal
-                .navigation_need_id
+            select(NavigationNeedSignal).where(
+                NavigationNeedSignal.navigation_need_id
                 == need.id,
-                NavigationNeedSignal
-                .navigation_signal_id
+                NavigationNeedSignal.navigation_signal_id
                 == signal.id,
             )
         )
 
         if existing_link is None:
-            db.add(
-                NavigationNeedSignal(
-                    navigation_need_id=(
-                        need.id
-                    ),
-                    navigation_signal_id=(
-                        signal.id
-                    ),
-                )
+            link = NavigationNeedSignal(
+                navigation_need_id=need.id,
+                navigation_signal_id=signal.id,
             )
 
-    return need
+            db.add(link)
 
+    db.flush()
+
+    return need
 def evaluate_transportation_need(
     db: Session,
     *,

@@ -97,3 +97,9 @@ class AttentionStatus(str, Enum):
     NEEDS_ATTENTION = "needs_attention"
     FOLLOW_UP = "follow_up"
     ON_TRACK = "on_track"
+
+class NavigationTaskStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
