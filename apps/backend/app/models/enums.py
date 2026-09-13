@@ -35,3 +35,26 @@ class CaregiverPermissionType(str, Enum):
     CARE_TASKS = "care_tasks"
     PROXY_CHECK_IN = "proxy_check_in"
     DOCUMENTS = "documents"
+
+class JourneyItemType(str, Enum):
+    APPOINTMENT = "appointment"
+    TREATMENT = "treatment"
+    REFERRAL = "referral"
+    FOLLOW_UP = "follow_up"
+    CARE_TASK = "care_task"
+    DOCUMENT = "document"
+    MILESTONE = "milestone"
+
+
+class JourneyItemStatus(str, Enum):
+    UPCOMING = "upcoming"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class AppointmentStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    MISSED = "missed"

@@ -19,7 +19,15 @@ from app.routers.patient_caregivers import (
 from app.routers.caregiver_portal import (
     router as caregiver_portal_router,
 )
-
+from app.routers.appointments import (
+    router as appointments_router,
+)
+from app.routers.journey import (
+    router as journey_router,
+)
+from app.routers.patient_journey import (
+    router as patient_journey_router,
+)
 app = FastAPI(
     title=settings.app_name,
     debug=settings.debug,
@@ -35,6 +43,9 @@ app.include_router(
 app.include_router(
     caregiver_portal_router
 )
+app.include_router(journey_router)
+app.include_router(appointments_router)
+app.include_router(patient_journey_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -12,6 +12,8 @@ from app.models.patient import (
     PatientProfile,
 )
 from app.models.user import User
+from app.models.appointment import Appointment
+from app.models.journey import CareJourneyItem
 
 __all__ = [
     "AccountInvitation",
@@ -24,4 +26,6 @@ __all__ = [
     "Organization",
     "PatientProfile",
     "User",
+    "Appointment",
+    "CareJourneyItem",
 ]
