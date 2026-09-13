@@ -1,9 +1,16 @@
 import uuid
+from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+)
 
 
 class NavigatorCreateRequest(BaseModel):
+    email: EmailStr
+
     first_name: str = Field(
         min_length=1,
         max_length=100,
@@ -13,8 +20,6 @@ class NavigatorCreateRequest(BaseModel):
         min_length=1,
         max_length=100,
     )
-
-    email: EmailStr
 
     job_title: str = Field(
         min_length=1,
@@ -34,6 +39,31 @@ class NavigatorCreateRequest(BaseModel):
 
 class NavigatorCreateResponse(BaseModel):
     user_id: uuid.UUID
+
     email: EmailStr
+
     status: str
+
     message: str
+
+
+class AdminNavigatorResponse(BaseModel):
+    user_id: uuid.UUID
+
+    email: EmailStr
+
+    status: str
+
+    first_name: str
+
+    last_name: str
+
+    job_title: str
+
+    department: str | None
+
+    phone: str | None
+
+    created_at: datetime
+
+    last_login_at: datetime | None

@@ -315,6 +315,7 @@ def approve_caregiver_access(
             caregiver_profile.first_name
         ),
         activation_token=raw_token,
+        activation_type="caregiver",
     )
 
     return CaregiverApprovalResponse(
