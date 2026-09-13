@@ -26,7 +26,28 @@ from app.schemas.auth import (
 from app.services.audit_service import (
     write_audit_log,
 )
-
+from app.core.security import (
+    create_access_token,
+    hash_password,
+    validate_password_strength,
+    verify_password_or_dummy,
+)
+from app.models.enums import (
+    InvitationPurpose,
+    UserStatus,
+)
+from app.schemas.auth import (
+    AccountActivateRequest,
+    AccountActivateResponse,
+    CurrentUserResponse,
+    InvitationValidateRequest,
+    InvitationValidateResponse,
+    LoginRequest,
+    TokenResponse,
+)
+from app.services.invitation_service import (
+    get_valid_invitation,
+)
 
 router = APIRouter(
     prefix="/auth",
@@ -126,4 +147,155 @@ def me(
         email=current_user.email,
         role=current_user.role,
         status=current_user.status,
+    )
+
+@router.post(
+    "/activate/validate",
+    response_model=InvitationValidateResponse,
+)
+def validate_activation(
+    payload: InvitationValidateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+) -> InvitationValidateResponse:
+    invitation = get_valid_invitation(
+        db,
+        raw_token=payload.token,
+         purpose=(
+        InvitationPurpose
+        .NAVIGATOR_ACTIVATION
+    ),
+    )
+
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invitation is invalid "
+                "or has expired."
+            ),
+        )
+
+    user = db.get(
+        User,
+        invitation.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation is invalid.",
+        )
+
+    if user.status != UserStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This account cannot "
+                "be activated."
+            ),
+        )
+
+    return InvitationValidateResponse(
+        valid=True,
+        email=user.email,
+        role=user.role,
+    )
+
+@router.post(
+    "/activate",
+    response_model=AccountActivateResponse,
+)
+def activate_account(
+    payload: AccountActivateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+) -> AccountActivateResponse:
+    invitation = get_valid_invitation(
+        db,
+        raw_token=payload.token,
+         purpose=(
+        InvitationPurpose
+        .NAVIGATOR_ACTIVATION
+    ),
+    )
+
+    if invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Invitation is invalid "
+                "or has expired."
+            ),
+        )
+
+    user = db.get(
+        User,
+        invitation.user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation is invalid.",
+        )
+
+    if user.status != UserStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This account cannot "
+                "be activated."
+            ),
+        )
+
+    try:
+        validate_password_strength(
+            payload.password
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+
+    user.password_hash = hash_password(
+        payload.password
+    )
+
+    user.email_verified_at = now
+    user.status = UserStatus.ACTIVE
+
+    invitation.used_at = now
+
+    write_audit_log(
+        db,
+        organization_id=user.organization_id,
+        actor_user_id=user.id,
+        action="ACCOUNT_ACTIVATED",
+        resource_type="user",
+        resource_id=str(user.id),
+        metadata_json={
+            "invitation_id": str(
+                invitation.id
+            ),
+            "purpose": (
+                invitation.purpose.value
+            ),
+        },
+    )
+
+    db.commit()
+
+    return AccountActivateResponse(
+        message=(
+            "Account activated successfully. "
+            "You can now log in."
+        ),
     )

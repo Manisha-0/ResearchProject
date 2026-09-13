@@ -18,9 +18,12 @@ class Settings(BaseSettings):
 
     bootstrap_organization_name: str
     bootstrap_organization_slug: str
-
     bootstrap_admin_email: str
     bootstrap_admin_password: str
+
+    account_invitation_expire_hours: int = 24
+    activation_url: str = "http://localhost:3000/activate"
+    email_provider: str = "console"
 
     model_config = SettingsConfigDict(
         env_file=".env",

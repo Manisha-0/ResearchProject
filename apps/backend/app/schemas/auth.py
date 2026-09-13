@@ -21,3 +21,21 @@ class CurrentUserResponse(BaseModel):
     email: EmailStr
     role: UserRole
     status: UserStatus
+
+class InvitationValidateRequest(BaseModel):
+    token: str
+
+
+class InvitationValidateResponse(BaseModel):
+    valid: bool
+    email: EmailStr
+    role: UserRole
+
+
+class AccountActivateRequest(BaseModel):
+    token: str
+    password: str
+
+
+class AccountActivateResponse(BaseModel):
+    message: str

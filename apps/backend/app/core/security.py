@@ -96,3 +96,39 @@ def decode_access_token(
         raise ValueError("Token subject is missing.")
 
     return payload
+
+def validate_password_strength(
+    password: str,
+) -> None:
+    if len(password) < 10:
+        raise ValueError(
+            "Password must be at least "
+            "10 characters long."
+        )
+
+    if not any(
+        char.isupper()
+        for char in password
+    ):
+        raise ValueError(
+            "Password must include "
+            "an uppercase letter."
+        )
+
+    if not any(
+        char.islower()
+        for char in password
+    ):
+        raise ValueError(
+            "Password must include "
+            "a lowercase letter."
+        )
+
+    if not any(
+        char.isdigit()
+        for char in password
+    ):
+        raise ValueError(
+            "Password must include "
+            "a number."
+        )
