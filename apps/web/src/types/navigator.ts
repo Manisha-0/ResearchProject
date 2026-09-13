@@ -30,8 +30,8 @@ export type CaregiverPermissionType =
   | "proxy_check_in"
   | "documents";
 
-/* Navigator dashboard*/
 
+/* Navigator dashboard */
 
 export type NavigatorDashboardCounts = {
   total_patients: number;
@@ -87,6 +87,59 @@ export type NavigatorDashboardResponse = {
   patients: NavigatorDashboardPatient[];
 
   tasks: NavigatorDashboardTask[];
+};
+
+
+/* Navigation task API */
+
+export type NavigationTaskCreateRequest = {
+  title?: string | null;
+
+  description?: string | null;
+
+  due_at?: string | null;
+};
+
+export type NavigationTaskUpdateRequest = {
+  status: NavigationTaskStatus;
+
+  resolution_note?: string | null;
+};
+
+export type NavigationTaskResponse = {
+  id: string;
+
+  patient_id: string;
+
+  navigation_need_id: string;
+
+  assigned_to_user_id: string;
+
+  title: string;
+
+  description: string | null;
+
+  status: NavigationTaskStatus;
+
+  due_at: string | null;
+
+  completed_at: string | null;
+
+  resolution_note: string | null;
+
+  created_at: string;
+};
+
+export type NavigatorTaskQueueItem = {
+  task: NavigationTaskResponse;
+
+  patient_first_name: string;
+
+  patient_last_name: string;
+
+  need_title: string;
+
+  attention_status: AttentionStatus;
 };
 
 
