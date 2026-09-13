@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
+    bootstrap_organization_name: str
+    bootstrap_organization_slug: str
+
     bootstrap_admin_email: str
     bootstrap_admin_password: str
 
