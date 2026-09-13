@@ -1,12 +1,31 @@
-import { CalendarDays, Clock3, MapPin } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  MapPin,
+  UserRound,
+} from "lucide-react";
 
-import type { Appointment } from "@/lib/types";
+import type {
+  PatientAppointment,
+} from "@/types/patient";
 
 export function Appointments({
   appointments,
 }: {
-  appointments: Appointment[];
+  appointments: PatientAppointment[];
 }) {
+  const orderedAppointments = [
+    ...appointments,
+  ].sort(
+    (first, second) =>
+      new Date(
+        first.scheduled_start,
+      ).getTime() -
+      new Date(
+        second.scheduled_start,
+      ).getTime(),
+  );
+
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-wide text-gold">
@@ -18,35 +37,102 @@ export function Appointments({
       </h2>
 
       <div className="mt-6 space-y-3">
-        {appointments.map((appointment) => (
-          <div key={appointment.id} className="rounded-xl bg-surface-soft p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-ink">{appointment.title}</p>
+        {orderedAppointments.length ===
+        0 ? (
+          <p className="text-sm text-ink-soft">
+            No appointments are currently
+            available.
+          </p>
+        ) : (
+          orderedAppointments.map(
+            (appointment) => (
+              <div
+                key={appointment.id}
+                className="rounded-xl bg-surface-soft p-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-ink">
+                      {
+                        appointment.title
+                      }
+                    </p>
 
-                <p className="mt-1 text-xs font-medium uppercase tracking-wide text-ink-soft">
-                  {appointment.status}
-                </p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-ink-soft">
+                      {formatStatus(
+                        appointment.status,
+                      )}
+                    </p>
+                  </div>
+
+                  <CalendarDays className="h-5 w-5 shrink-0 text-navy" />
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-ink-soft">
+                  <div className="flex items-center gap-2">
+                    <Clock3 className="h-4 w-4 shrink-0 text-navy" />
+
+                    {formatDateTime(
+                      appointment.scheduled_start,
+                    )}
+                  </div>
+
+                  {(appointment.location_name ||
+                    appointment.address_text) && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+
+                      <span>
+                        {[
+                          appointment.location_name,
+                          appointment.address_text,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </div>
+                  )}
+
+                  {appointment.provider_name && (
+                    <div className="flex items-center gap-2">
+                      <UserRound className="h-4 w-4 shrink-0 text-navy" />
+
+                      {
+                        appointment.provider_name
+                      }
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <CalendarDays className="h-5 w-5 text-navy" />
-            </div>
-
-            <div className="mt-4 space-y-2 text-sm text-ink-soft">
-              <div className="flex items-center gap-2">
-                <Clock3 className="h-4 w-4 text-navy" />
-                {appointment.date} · {appointment.time}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-navy" />
-
-                {appointment.location}
-              </div>
-            </div>
-          </div>
-        ))}
+            ),
+          )
+        )}
       </div>
     </section>
   );
+}
+
+function formatDateTime(
+  value: string,
+) {
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    },
+  ).format(new Date(value));
+}
+
+function formatStatus(
+  value: string,
+) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
 }

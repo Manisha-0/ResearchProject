@@ -5,7 +5,6 @@ import { persist } from "zustand/middleware";
 
 import {
   caregivers as seedCaregivers,
-  demoAccounts,
   seedPatients,
 } from "@/lib/data";
 
@@ -16,7 +15,6 @@ import type {
   CareGap,
   Caregiver,
   CheckIn,
-  DemoSession,
   DocumentCategory,
   JourneyStatus,
   Patient,
@@ -37,9 +35,13 @@ type SubmitCheckInInput = {
 
 type AddAppointmentInput = {
   title: string;
+
   date: string;
+
   time: string;
+
   location: string;
+
   within48Hours?: boolean;
 };
 
@@ -53,52 +55,57 @@ type AddDocumentInput = {
   sourceText: string;
 };
 
-type SignInResult =
-  | {
-      success: true;
-      redirectTo: string;
-    }
-  | {
-      success: false;
-      error: string;
-    };
-
 type CompassStore = {
-  session: DemoSession | null;
-
   patients: Patient[];
 
   caregivers: Caregiver[];
 
-  signIn: (email: string, password: string) => SignInResult;
+  getPatient: (
+    patientId: string
+  ) => Patient | undefined;
 
-  signOut: () => void;
+  getCaregiver: (
+    caregiverId: string
+  ) => Caregiver | undefined;
 
-  getPatient: (patientId: string) => Patient | undefined;
+  getCaregiversForPatient: (
+    patientId: string
+  ) => Caregiver[];
 
-  getCaregiver: (caregiverId: string) => Caregiver | undefined;
+  submitCheckIn: (
+    patientId: string,
+    input: SubmitCheckInInput
+  ) => void;
 
-  getCaregiversForPatient: (patientId: string) => Caregiver[];
+  resolveGap: (
+    patientId: string,
+    gapId: string,
+    resolvedBy?: string
+  ) => void;
 
-  submitCheckIn: (patientId: string, input: SubmitCheckInInput) => void;
+  addAppointment: (
+    patientId: string,
+    input: AddAppointmentInput
+  ) => void;
 
-  resolveGap: (patientId: string, gapId: string, resolvedBy?: string) => void;
-
-  addAppointment: (patientId: string, input: AddAppointmentInput) => void;
-
-  addDocument: (patientId: string, input: AddDocumentInput) => void;
+  addDocument: (
+    patientId: string,
+    input: AddDocumentInput
+  ) => void;
 
   updateJourneyStatus: (
     patientId: string,
     journeyItemId: string,
-    status: JourneyStatus,
+    status: JourneyStatus
   ) => void;
 
   resetDemo: () => void;
 };
 
 function createId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
 }
 
 function getInitialPatients() {
@@ -109,433 +116,562 @@ function getInitialCaregivers() {
   return structuredClone(seedCaregivers);
 }
 
-export const useCompassStore = create<CompassStore>()(
-  persist(
-    (set, get) => ({
-      session: null,
+export const useCompassStore =
+  create<CompassStore>()(
+    persist(
+      (set, get) => ({
+        patients: getInitialPatients(),
 
-      patients: getInitialPatients(),
+        caregivers: getInitialCaregivers(),
 
-      caregivers: getInitialCaregivers(),
+        getPatient: (
+          patientId
+        ) => {
+          return get().patients.find(
+            (patient) =>
+              patient.id === patientId
+          );
+        },
 
-      signIn: (email, password) => {
-        const account = demoAccounts.find(
-          (candidate) =>
-            candidate.email.toLowerCase() === email.trim().toLowerCase() &&
-            candidate.password === password,
-        );
+        getCaregiver: (
+          caregiverId
+        ) => {
+          return get().caregivers.find(
+            (caregiver) =>
+              caregiver.id === caregiverId
+          );
+        },
 
-        if (!account) {
-          return {
-            success: false,
+        getCaregiversForPatient: (
+          patientId
+        ) => {
+          return get().caregivers.filter(
+            (caregiver) =>
+              caregiver.patientId ===
+                patientId &&
+              caregiver.status ===
+                "active"
+          );
+        },
 
-            error: "The email or password is incorrect.",
-          };
-        }
+        submitCheckIn: (
+          patientId,
+          input
+        ) => {
+          const now =
+            new Date().toISOString();
 
-        set({
-          session: {
-            userId: account.id,
-
-            name: account.name,
-
-            role: account.role,
-
-            patientId: account.patientId,
-          },
-        });
-
-        const redirectTo =
-          account.role === "patient"
-            ? "/patient"
-            : account.role === "caregiver"
-              ? "/caregiver"
-              : "/navigator";
-
-        return {
-          success: true,
-          redirectTo,
-        };
-      },
-
-      signOut: () => {
-        set({
-          session: null,
-        });
-      },
-
-      getPatient: (patientId) => {
-        return get().patients.find((patient) => patient.id === patientId);
-      },
-
-      getCaregiver: (caregiverId) => {
-        return get().caregivers.find(
-          (caregiver) => caregiver.id === caregiverId,
-        );
-      },
-
-      getCaregiversForPatient: (patientId) => {
-        return get().caregivers.filter(
-          (caregiver) =>
-            caregiver.patientId === patientId && caregiver.status === "active",
-        );
-      },
-
-      submitCheckIn: (patientId, input) => {
-        const now = new Date().toISOString();
-
-        set((state) => ({
-          patients: state.patients.map((patient) => {
-            if (patient.id !== patientId) {
-              return patient;
-            }
-
-            const checkIn: CheckIn = {
-              id: createId("checkin"),
-
-              createdAt: now,
-
-              nausea: input.nausea,
-
-              transportStatus: input.transportStatus,
-
-              medicationStatus: input.medicationStatus,
-
-              note: input.note,
-
-              submittedBy: input.submittedBy ?? {
-                id: patient.id,
-
-                name: `${patient.firstName} ${patient.lastName}`,
-
-                role: "patient",
-              },
-            };
-
-            let careGaps = [...patient.careGaps];
-
-            const openTransportGap = careGaps.find(
-              (gap) =>
-                gap.type === "transportation" && gap.status !== "resolved",
-            );
-
-            if (input.transportStatus !== "confirmed" && !openTransportGap) {
-              careGaps.push({
-                id: createId("transport-gap"),
-
-                type: "transportation",
-
-                title: "Transportation unresolved",
-
-                description:
-                  "Transportation is not confirmed for the upcoming treatment.",
-
-                status: "open",
-
-                createdAt: now,
-              });
-            }
-
-            if (input.transportStatus === "confirmed" && openTransportGap) {
-              careGaps = careGaps.map((gap) =>
-                gap.id === openTransportGap.id
-                  ? {
-                      ...gap,
-
-                      status: "resolved",
-
-                      resolvedAt: now,
-
-                      resolvedBy: checkIn.submittedBy.name,
-                    }
-                  : gap,
-              );
-            }
-
-            const openSymptomGap = careGaps.find(
-              (gap) => gap.type === "symptom" && gap.status !== "resolved",
-            );
-
-            if (input.nausea === "severe" && !openSymptomGap) {
-              careGaps.push({
-                id: createId("symptom-gap"),
-
-                type: "symptom",
-
-                title: "Severe nausea reported",
-
-                description:
-                  "Severe nausea was reported during today's patient check-in.",
-
-                status: "open",
-
-                createdAt: now,
-              });
-            }
-
-            const openMedicationGap = careGaps.find(
-              (gap) => gap.type === "medication" && gap.status !== "resolved",
-            );
-
-            if (
-              input.medicationStatus === "having_trouble" &&
-              !openMedicationGap
-            ) {
-              careGaps.push({
-                id: createId("medication-gap"),
-
-                type: "medication",
-
-                title: "Medication concern",
-
-                description:
-                  "The patient reported difficulty taking or accessing medication.",
-
-                status: "open",
-
-                createdAt: now,
-              });
-            }
-
-            return {
-              ...patient,
-
-              checkIns: [checkIn, ...patient.checkIns],
-
-              careGaps,
-            };
-          }),
-        }));
-      },
-
-      resolveGap: (
-        patientId,
-        gapId,
-        resolvedBy = "James Wilson · Navigator",
-      ) => {
-        const now = new Date().toISOString();
-
-        set((state) => ({
-          patients: state.patients.map((patient) => {
-            if (patient.id !== patientId) {
-              return patient;
-            }
-
-            const gapToResolve = patient.careGaps.find(
-              (gap) => gap.id === gapId,
-            );
-
-            if (!gapToResolve) {
-              return patient;
-            }
-
-            const careGaps: CareGap[] = patient.careGaps.map((gap) =>
-              gap.id === gapId
-                ? {
-                    ...gap,
-
-                    status: "resolved",
-
-                    resolvedAt: now,
-
-                    resolvedBy,
+          set((state) => ({
+            patients:
+              state.patients.map(
+                (patient) => {
+                  if (
+                    patient.id !==
+                    patientId
+                  ) {
+                    return patient;
                   }
-                : gap,
+
+                  const checkIn: CheckIn =
+                    {
+                      id: createId(
+                        "checkin"
+                      ),
+
+                      createdAt: now,
+
+                      nausea:
+                        input.nausea,
+
+                      transportStatus:
+                        input.transportStatus,
+
+                      medicationStatus:
+                        input.medicationStatus,
+
+                      note: input.note,
+
+                      submittedBy:
+                        input.submittedBy ??
+                        {
+                          id: patient.id,
+
+                          name: `${patient.firstName} ${patient.lastName}`,
+
+                          role: "patient",
+                        },
+                    };
+
+                  let careGaps = [
+                    ...patient.careGaps,
+                  ];
+
+                  const openTransportGap =
+                    careGaps.find(
+                      (gap) =>
+                        gap.type ===
+                          "transportation" &&
+                        gap.status !==
+                          "resolved"
+                    );
+
+                  if (
+                    input.transportStatus !==
+                      "confirmed" &&
+                    !openTransportGap
+                  ) {
+                    careGaps.push({
+                      id: createId(
+                        "transport-gap"
+                      ),
+
+                      type: "transportation",
+
+                      title:
+                        "Transportation unresolved",
+
+                      description:
+                        "Transportation is not confirmed for the upcoming treatment.",
+
+                      status: "open",
+
+                      createdAt: now,
+                    });
+                  }
+
+                  if (
+                    input.transportStatus ===
+                      "confirmed" &&
+                    openTransportGap
+                  ) {
+                    careGaps =
+                      careGaps.map(
+                        (gap) =>
+                          gap.id ===
+                          openTransportGap.id
+                            ? {
+                                ...gap,
+
+                                status:
+                                  "resolved",
+
+                                resolvedAt:
+                                  now,
+
+                                resolvedBy:
+                                  checkIn
+                                    .submittedBy
+                                    .name,
+                              }
+                            : gap
+                      );
+                  }
+
+                  const openSymptomGap =
+                    careGaps.find(
+                      (gap) =>
+                        gap.type ===
+                          "symptom" &&
+                        gap.status !==
+                          "resolved"
+                    );
+
+                  if (
+                    input.nausea ===
+                      "severe" &&
+                    !openSymptomGap
+                  ) {
+                    careGaps.push({
+                      id: createId(
+                        "symptom-gap"
+                      ),
+
+                      type: "symptom",
+
+                      title:
+                        "Severe nausea reported",
+
+                      description:
+                        "Severe nausea was reported during today's patient check-in.",
+
+                      status: "open",
+
+                      createdAt: now,
+                    });
+                  }
+
+                  const openMedicationGap =
+                    careGaps.find(
+                      (gap) =>
+                        gap.type ===
+                          "medication" &&
+                        gap.status !==
+                          "resolved"
+                    );
+
+                  if (
+                    input.medicationStatus ===
+                      "having_trouble" &&
+                    !openMedicationGap
+                  ) {
+                    careGaps.push({
+                      id: createId(
+                        "medication-gap"
+                      ),
+
+                      type: "medication",
+
+                      title:
+                        "Medication concern",
+
+                      description:
+                        "The patient reported difficulty taking or accessing medication.",
+
+                      status: "open",
+
+                      createdAt: now,
+                    });
+                  }
+
+                  return {
+                    ...patient,
+
+                    checkIns: [
+                      checkIn,
+                      ...patient.checkIns,
+                    ],
+
+                    careGaps,
+                  };
+                }
+              ),
+          }));
+        },
+
+        resolveGap: (
+          patientId,
+          gapId,
+          resolvedBy =
+            "Navigator"
+        ) => {
+          const now =
+            new Date().toISOString();
+
+          set((state) => ({
+            patients:
+              state.patients.map(
+                (patient) => {
+                  if (
+                    patient.id !==
+                    patientId
+                  ) {
+                    return patient;
+                  }
+
+                  const gapToResolve =
+                    patient.careGaps.find(
+                      (gap) =>
+                        gap.id === gapId
+                    );
+
+                  if (!gapToResolve) {
+                    return patient;
+                  }
+
+                  const careGaps:
+                    CareGap[] =
+                      patient.careGaps.map(
+                        (gap) =>
+                          gap.id === gapId
+                            ? {
+                                ...gap,
+
+                                status:
+                                  "resolved",
+
+                                resolvedAt:
+                                  now,
+
+                                resolvedBy,
+                              }
+                            : gap
+                      );
+
+                  let checkIns = [
+                    ...patient.checkIns,
+                  ];
+
+                  if (
+                    gapToResolve.type ===
+                      "transportation" &&
+                    checkIns.length > 0
+                  ) {
+                    checkIns =
+                      checkIns.map(
+                        (
+                          checkIn,
+                          index
+                        ) =>
+                          index === 0
+                            ? {
+                                ...checkIn,
+
+                                transportStatus:
+                                  "confirmed",
+                              }
+                            : checkIn
+                      );
+                  }
+
+                  return {
+                    ...patient,
+
+                    careGaps,
+
+                    checkIns,
+                  };
+                }
+              ),
+          }));
+        },
+
+        addAppointment: (
+          patientId,
+          input
+        ) => {
+          const now =
+            new Date().toISOString();
+
+          const appointmentId =
+            createId(
+              "appointment"
             );
 
-            let checkIns = [...patient.checkIns];
-
-            if (gapToResolve.type === "transportation" && checkIns.length > 0) {
-              checkIns = checkIns.map((checkIn, index) =>
-                index === 0
-                  ? {
-                      ...checkIn,
-
-                      transportStatus: "confirmed",
-                    }
-                  : checkIn,
-              );
-            }
-
-            return {
-              ...patient,
-
-              careGaps,
-
-              checkIns,
-            };
-          }),
-        }));
-      },
-
-      addAppointment: (patientId, input) => {
-        const now = new Date().toISOString();
-
-        const appointmentId = createId("appointment");
-
-        set((state) => ({
-          patients: state.patients.map((patient) => {
-            if (patient.id !== patientId) {
-              return patient;
-            }
-
-            const appointment: Appointment = {
-              id: appointmentId,
-
-              patientId,
-
-              title: input.title,
-
-              date: input.date,
-
-              time: input.time,
-
-              location: input.location,
-
-              status: "scheduled",
-
-              createdAt: now,
-
-              createdBy: state.session?.name
-                ? `${state.session.name} · Navigator`
-                : "Navigator",
-            };
-
-            return {
-              ...patient,
-
-              nextTreatment: input.within48Hours
-                ? {
-                    label: input.title,
-
-                    date: input.date,
-
-                    time: input.time,
-
-                    within48Hours: true,
+          set((state) => ({
+            patients:
+              state.patients.map(
+                (patient) => {
+                  if (
+                    patient.id !==
+                    patientId
+                  ) {
+                    return patient;
                   }
-                : patient.nextTreatment,
 
-              appointments: [appointment, ...patient.appointments],
+                  const appointment:
+                    Appointment = {
+                      id: appointmentId,
 
-              journey: [
-                ...patient.journey,
+                      patientId,
 
-                {
-                  id: createId("journey"),
+                      title:
+                        input.title,
 
-                  patientId,
+                      date:
+                        input.date,
 
-                  type: "appointment",
+                      time:
+                        input.time,
 
-                  title: input.title,
+                      location:
+                        input.location,
 
-                  detail: `${input.time} · ${input.location}`,
+                      status:
+                        "scheduled",
 
-                  date: input.date,
+                      createdAt: now,
 
-                  status: "upcoming",
+                      createdBy:
+                        "Navigator",
+                    };
 
-                  updatedBy: appointment.createdBy,
-                },
-              ],
-            };
-          }),
-        }));
-      },
+                  return {
+                    ...patient,
 
-      addDocument: (patientId, input) => {
-        const now = new Date().toISOString();
+                    nextTreatment:
+                      input.within48Hours
+                        ? {
+                            label:
+                              input.title,
 
-        set((state) => ({
-          patients: state.patients.map((patient) => {
-            if (patient.id !== patientId) {
-              return patient;
-            }
+                            date:
+                              input.date,
 
-            const uploadedBy = state.session?.name
-              ? `${state.session.name} · Navigator`
-              : "Navigator";
+                            time:
+                              input.time,
 
-            const document: PatientDocument = {
-              id: createId("document"),
+                            within48Hours:
+                              true,
+                          }
+                        : patient.nextTreatment,
 
-              patientId,
+                    appointments: [
+                      appointment,
+                      ...patient.appointments,
+                    ],
 
-              title: input.title,
+                    journey: [
+                      ...patient.journey,
 
-              category: input.category,
+                      {
+                        id: createId(
+                          "journey"
+                        ),
 
-              fileName: input.fileName,
+                        patientId,
 
-              uploadedAt: now,
+                        type:
+                          "appointment",
 
-              uploadedBy,
+                        title:
+                          input.title,
 
-              sourceText: input.sourceText,
+                        detail: `${input.time} · ${input.location}`,
 
-              patientFriendlySummary: createPatientFriendlyDocumentSummary(
-                input.title,
-                input.sourceText,
+                        date:
+                          input.date,
+
+                        status:
+                          "upcoming",
+
+                        updatedBy:
+                          "Navigator",
+                      },
+                    ],
+                  };
+                }
               ),
-            };
+          }));
+        },
 
-            return {
-              ...patient,
+        addDocument: (
+          patientId,
+          input
+        ) => {
+          const now =
+            new Date().toISOString();
 
-              documents: [document, ...patient.documents],
-            };
-          }),
-        }));
-      },
+          set((state) => ({
+            patients:
+              state.patients.map(
+                (patient) => {
+                  if (
+                    patient.id !==
+                    patientId
+                  ) {
+                    return patient;
+                  }
 
-      updateJourneyStatus: (patientId, journeyItemId, status) => {
-        set((state) => ({
-          patients: state.patients.map((patient) => {
-            if (patient.id !== patientId) {
-              return patient;
-            }
+                  const uploadedBy =
+                    "Navigator";
 
-            return {
-              ...patient,
+                  const document:
+                    PatientDocument = {
+                      id: createId(
+                        "document"
+                      ),
 
-              journey: patient.journey.map((item) =>
-                item.id === journeyItemId
-                  ? {
-                      ...item,
+                      patientId,
 
-                      status,
+                      title:
+                        input.title,
 
-                      updatedBy: state.session?.name
-                        ? `${state.session.name} · Navigator`
-                        : "Navigator",
-                    }
-                  : item,
+                      category:
+                        input.category,
+
+                      fileName:
+                        input.fileName,
+
+                      uploadedAt: now,
+
+                      uploadedBy,
+
+                      sourceText:
+                        input.sourceText,
+
+                      patientFriendlySummary:
+                        createPatientFriendlyDocumentSummary(
+                          input.title,
+                          input.sourceText
+                        ),
+                    };
+
+                  return {
+                    ...patient,
+
+                    documents: [
+                      document,
+                      ...patient.documents,
+                    ],
+                  };
+                }
               ),
-            };
-          }),
-        }));
-      },
+          }));
+        },
 
-      resetDemo: () => {
-        set({
-          patients: getInitialPatients(),
+        updateJourneyStatus: (
+          patientId,
+          journeyItemId,
+          status
+        ) => {
+          set((state) => ({
+            patients:
+              state.patients.map(
+                (patient) => {
+                  if (
+                    patient.id !==
+                    patientId
+                  ) {
+                    return patient;
+                  }
 
-          caregivers: getInitialCaregivers(),
-        });
-      },
-    }),
+                  return {
+                    ...patient,
 
-    {
-      name: "project-compass-demo-v3",
+                    journey:
+                      patient.journey.map(
+                        (item) =>
+                          item.id ===
+                          journeyItemId
+                            ? {
+                                ...item,
 
-      partialize: (state) => ({
-        session: state.session,
+                                status,
 
-        patients: state.patients,
+                                updatedBy:
+                                  "Navigator",
+                              }
+                            : item
+                      ),
+                  };
+                }
+              ),
+          }));
+        },
 
-        caregivers: state.caregivers,
+        resetDemo: () => {
+          set({
+            patients:
+              getInitialPatients(),
+
+            caregivers:
+              getInitialCaregivers(),
+          });
+        },
       }),
-    },
-  ),
-);
+
+      {
+        name: "project-compass-demo-v4",
+
+        partialize: (
+          state
+        ) => ({
+          patients:
+            state.patients,
+
+          caregivers:
+            state.caregivers,
+        }),
+      }
+    )
+  );
