@@ -14,6 +14,8 @@ from app.models.patient import (
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.journey import CareJourneyItem
+from app.models.check_in import CheckIn
+from app.models.navigation_signal import NavigationSignal
 
 __all__ = [
     "AccountInvitation",
@@ -28,4 +30,6 @@ __all__ = [
     "User",
     "Appointment",
     "CareJourneyItem",
+    "CheckIn",
+    "NavigationSignal",
 ]

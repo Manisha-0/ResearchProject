@@ -28,6 +28,12 @@ from app.routers.journey import (
 from app.routers.patient_journey import (
     router as patient_journey_router,
 )
+from app.routers.check_ins import (
+    router as check_ins_router,
+)
+from app.routers.signals import (
+    router as signals_router,
+)
 app = FastAPI(
     title=settings.app_name,
     debug=settings.debug,
@@ -46,6 +52,8 @@ app.include_router(
 app.include_router(journey_router)
 app.include_router(appointments_router)
 app.include_router(patient_journey_router)
+app.include_router(check_ins_router)
+app.include_router(signals_router)
 
 app.add_middleware(
     CORSMiddleware,

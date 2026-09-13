@@ -58,3 +58,32 @@ class AppointmentStatus(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     MISSED = "missed"
+
+class CheckInSource(str, Enum):
+    PATIENT = "patient"
+    CAREGIVER = "caregiver"
+
+
+class NavigationSignalCategory(str, Enum):
+    ACCESS = "access"
+    CARE_COORDINATION = "care_coordination"
+    PATIENT_REPORTED = "patient_reported"
+    FINANCIAL = "financial"
+    ENGAGEMENT = "engagement"
+    SOCIAL_SUPPORT = "social_support"
+    ADMINISTRATIVE = "administrative"
+    SYSTEM = "system"
+
+
+class NavigationSignalStatus(str, Enum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+
+class NavigationSignalSourceType(str, Enum):
+    CHECK_IN = "check_in"
+    APPOINTMENT = "appointment"
+    CARE_JOURNEY = "care_journey"
+    CAREGIVER = "caregiver"
+    SYSTEM = "system"
