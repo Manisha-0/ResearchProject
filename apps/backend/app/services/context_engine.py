@@ -548,15 +548,38 @@ def evaluate_and_snapshot_patient(
         )
     )
 
-    snapshot = AttentionSnapshot(
-        patient_id=patient_id,
-        status=attention_status,
-        open_need_count=len(needs),
-        explanation=explanation,
+    latest_snapshot = db.scalar(
+        select(AttentionSnapshot)
+        .where(
+            AttentionSnapshot.patient_id
+            == patient_id
+        )
+        .order_by(
+            AttentionSnapshot.created_at.desc()
+        )
+        .limit(1)
     )
 
-    db.add(snapshot)
-    db.flush()
+    snapshot_changed = (
+        latest_snapshot is None
+        or latest_snapshot.status
+        != attention_status
+        or latest_snapshot.open_need_count
+        != len(needs)
+        or latest_snapshot.explanation
+        != explanation
+    )
+
+    if snapshot_changed:
+        snapshot = AttentionSnapshot(
+            patient_id=patient_id,
+            status=attention_status,
+            open_need_count=len(needs),
+            explanation=explanation,
+        )
+
+        db.add(snapshot)
+        db.flush()
 
     return (
         attention_status,

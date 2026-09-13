@@ -46,6 +46,12 @@ from app.routers.tasks import (
 from app.routers.navigator_tasks import (
     router as navigator_tasks_router,
 )
+from app.routers.patient_360 import (
+    router as patient_360_router,
+)
+from app.routers.navigator_dashboard import (
+    router as navigator_dashboard_router,
+)
 
 app = FastAPI(
     title=settings.app_name,
@@ -74,6 +80,12 @@ app.include_router(
 app.include_router(tasks_router)
 app.include_router(
     navigator_tasks_router
+)
+app.include_router(
+    patient_360_router
+)
+app.include_router(
+    navigator_dashboard_router
 )
 
 app.add_middleware(
