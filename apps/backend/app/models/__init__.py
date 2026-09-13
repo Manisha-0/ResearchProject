@@ -16,6 +16,9 @@ from app.models.appointment import Appointment
 from app.models.journey import CareJourneyItem
 from app.models.check_in import CheckIn
 from app.models.navigation_signal import NavigationSignal
+from app.models.attention_snapshot import AttentionSnapshot
+from app.models.navigation_need import NavigationNeed
+from app.models.navigation_need_signal import NavigationNeedSignal
 
 __all__ = [
     "AccountInvitation",
@@ -32,4 +35,7 @@ __all__ = [
     "CareJourneyItem",
     "CheckIn",
     "NavigationSignal",
+    "AttentionSnapshot",
+    "NavigationNeed",
+    "NavigationNeedSignal",
 ]

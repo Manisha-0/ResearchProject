@@ -87,3 +87,13 @@ class NavigationSignalSourceType(str, Enum):
     CARE_JOURNEY = "care_journey"
     CAREGIVER = "caregiver"
     SYSTEM = "system"
+
+class NavigationNeedStatus(str, Enum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+
+
+class AttentionStatus(str, Enum):
+    NEEDS_ATTENTION = "needs_attention"
+    FOLLOW_UP = "follow_up"
+    ON_TRACK = "on_track"
