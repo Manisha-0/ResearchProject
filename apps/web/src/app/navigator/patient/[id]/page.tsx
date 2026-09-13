@@ -49,6 +49,7 @@ import type {
   NavigationTaskStatus,
   Patient360CheckIn,
   Patient360Need,
+  Patient360Resolution,
   Patient360Response,
   Patient360Task,
 } from "@/types/navigator";
@@ -339,7 +340,7 @@ export default function PatientDetailPage() {
     } catch (caughtError) {
       if (
         caughtError instanceof
-        ApiError &&
+          ApiError &&
         caughtError.status === 401
       ) {
         handleRequestError(
@@ -457,6 +458,12 @@ export default function PatientDetailPage() {
                     }
                     onComplete={
                       openCompletion
+                    }
+                  />
+
+                  <RecentResolutions
+                    resolutions={
+                      patient.recent_resolutions
                     }
                   />
                 </aside>
@@ -945,6 +952,102 @@ function ActiveTasks({
   );
 }
 
+function RecentResolutions({
+  resolutions,
+}: {
+  resolutions:
+    Patient360Resolution[];
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <CheckCircle2 className="h-5 w-5 text-priority-low" />
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            Resolution History
+          </p>
+
+          <h2 className="mt-1 font-semibold text-ink">
+            Recently completed work
+          </h2>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {resolutions.length ===
+        0 ? (
+          <p className="text-sm leading-6 text-ink-soft">
+            No completed navigation
+            work is recorded yet.
+          </p>
+        ) : (
+          resolutions.map(
+            (resolution) => (
+              <div
+                key={
+                  resolution.task_id
+                }
+                className="rounded-xl border border-border bg-surface-soft p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-priority-low-tint">
+                    <CheckCircle2 className="h-4 w-4 text-priority-low" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">
+                          {
+                            resolution.need_title
+                          }
+                        </p>
+
+                        <p className="mt-1 text-xs text-ink-soft">
+                          Task:{" "}
+                          {
+                            resolution.task_title
+                          }
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 rounded-full bg-priority-low-tint px-2.5 py-1 text-[11px] font-semibold text-priority-low">
+                        Resolved
+                      </span>
+                    </div>
+
+                    <div className="mt-3 rounded-lg bg-white p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                        Resolution note
+                      </p>
+
+                      <p className="mt-1.5 text-sm leading-6 text-ink">
+                        {
+                          resolution.resolution_note
+                        }
+                      </p>
+                    </div>
+
+                    <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-ink-soft">
+                      <Clock3 className="h-3.5 w-3.5" />
+
+                      Completed{" "}
+                      {formatDateTime(
+                        resolution.completed_at,
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ),
+          )
+        )}
+      </div>
+    </section>
+  );
+}
+
 function CompleteTaskDialog({
   task,
   resolutionNote,
@@ -1368,7 +1471,7 @@ function UpcomingAppointments({
   patient: Patient360Response;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6 lg:sticky lg:top-24">
+    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6  lg:top-24">
       <div className="flex items-center gap-3">
         <CalendarDays className="h-5 w-5 text-navy" />
 
@@ -1488,7 +1591,7 @@ function InfoItem({
           {label}
         </p>
 
-        <p className="mt-1 break-words text-sm font-semibold text-ink">
+        <p className="mt-1 wrap-break-word text-sm font-semibold text-ink">
           {value}
         </p>
       </div>

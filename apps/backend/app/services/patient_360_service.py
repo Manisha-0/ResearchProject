@@ -30,6 +30,7 @@ from app.schemas.patient_360 import (
     Patient360CheckInResponse,
     Patient360NeedResponse,
     Patient360ProfileResponse,
+    Patient360ResolutionResponse,
     Patient360Response,
     Patient360TaskResponse,
 )
@@ -165,7 +166,8 @@ def build_patient_360(
     check_ins = db.scalars(
         select(CheckIn)
         .where(
-            CheckIn.patient_id == patient.id
+            CheckIn.patient_id
+            == patient.id
         )
         .order_by(
             CheckIn.created_at.desc()
@@ -338,6 +340,52 @@ def build_patient_360(
         for task in tasks
     ]
 
+    # ---------------------------------------------------------
+    # Recent completed navigator work
+    # ---------------------------------------------------------
+
+    completed_task_rows = db.execute(
+        select(
+            NavigationTask,
+            NavigationNeed,
+        )
+        .join(
+            NavigationNeed,
+            NavigationNeed.id
+            == NavigationTask.navigation_need_id,
+        )
+        .where(
+            NavigationTask.patient_id
+            == patient.id,
+            NavigationTask.status
+            == NavigationTaskStatus.COMPLETED,
+            NavigationTask.completed_at.is_not(
+                None
+            ),
+        )
+        .order_by(
+            NavigationTask.completed_at.desc()
+        )
+        .limit(5)
+    ).all()
+
+    recent_resolutions = [
+        Patient360ResolutionResponse(
+            task_id=task.id,
+            navigation_need_id=(
+                task.navigation_need_id
+            ),
+            need_title=need.title,
+            task_title=task.title,
+            completed_at=task.completed_at,
+            resolution_note=(
+                task.resolution_note
+                or "Completed without a resolution note."
+            ),
+        )
+        for task, need in completed_task_rows
+    ]
+
     return Patient360Response(
         profile=Patient360ProfileResponse(
             patient_id=patient.id,
@@ -372,4 +420,5 @@ def build_patient_360(
         caregivers=caregivers,
         open_needs=open_needs,
         active_tasks=active_tasks,
+        recent_resolutions=recent_resolutions,
     )

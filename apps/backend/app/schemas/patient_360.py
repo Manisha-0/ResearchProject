@@ -105,6 +105,17 @@ class Patient360TaskResponse(BaseModel):
     resolution_note: str | None
 
 
+class Patient360ResolutionResponse(BaseModel):
+    task_id: uuid.UUID
+    navigation_need_id: uuid.UUID
+
+    need_title: str
+    task_title: str
+
+    completed_at: datetime
+    resolution_note: str
+
+
 class Patient360AttentionResponse(BaseModel):
     status: AttentionStatus
     explanation: str
@@ -134,4 +145,8 @@ class Patient360Response(BaseModel):
 
     active_tasks: list[
         Patient360TaskResponse
+    ]
+
+    recent_resolutions: list[
+        Patient360ResolutionResponse
     ]

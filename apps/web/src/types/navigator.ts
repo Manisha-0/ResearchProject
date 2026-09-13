@@ -263,6 +263,20 @@ export type Patient360Task = {
   resolution_note: string | null;
 };
 
+export type Patient360Resolution = {
+  task_id: string;
+
+  navigation_need_id: string;
+
+  need_title: string;
+
+  task_title: string;
+
+  completed_at: string;
+
+  resolution_note: string;
+};
+
 export type Patient360Attention = {
   status: AttentionStatus;
 
@@ -285,4 +299,6 @@ export type Patient360Response = {
   open_needs: Patient360Need[];
 
   active_tasks: Patient360Task[];
+
+  recent_resolutions: Patient360Resolution[];
 };
