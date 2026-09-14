@@ -20,6 +20,7 @@ from app.models.attention_snapshot import AttentionSnapshot
 from app.models.navigation_need import NavigationNeed
 from app.models.navigation_need_signal import NavigationNeedSignal
 from app.models.navigation_task import NavigationTask
+from app.models.document import Document
 
 __all__ = [
     "AccountInvitation",
@@ -40,4 +41,5 @@ __all__ = [
     "NavigationNeed",
     "NavigationNeedSignal",
     "NavigationTask",
+    "Document",
 ]

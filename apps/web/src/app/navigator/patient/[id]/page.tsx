@@ -53,6 +53,9 @@ import type {
   Patient360Response,
   Patient360Task,
 } from "@/types/navigator";
+import {
+  PatientDocuments,
+} from "@/components/navigator/PatientDocuments";
 
 export default function PatientDetailPage() {
   const params =
@@ -425,7 +428,11 @@ export default function PatientDetailPage() {
                       handleCreateTask
                     }
                   />
-
+                  <PatientDocuments
+                    patientId={
+                      patient.profile.patient_id
+                    }
+                  />
                   <RecentCheckIns
                     patient={
                       patient
