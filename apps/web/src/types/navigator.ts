@@ -30,6 +30,21 @@ export type CaregiverPermissionType =
   | "proxy_check_in"
   | "documents";
 
+export type JourneyItemType =
+  | "appointment"
+  | "treatment"
+  | "referral"
+  | "follow_up"
+  | "care_task"
+  | "document"
+  | "milestone";
+
+export type JourneyItemStatus =
+  | "upcoming"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
 
 /* Navigator dashboard */
 
@@ -87,6 +102,179 @@ export type NavigatorDashboardResponse = {
   patients: NavigatorDashboardPatient[];
 
   tasks: NavigatorDashboardTask[];
+};
+
+
+/* Patient creation */
+
+export type PatientCreateRequest = {
+  first_name: string;
+
+  last_name: string;
+
+  date_of_birth: string;
+
+  email: string;
+
+  phone?: string | null;
+
+  preferred_language: string;
+
+  preferred_contact_method?: string | null;
+
+  care_program?: string | null;
+
+  external_patient_reference?: string | null;
+};
+
+export type PatientCreateResponse = {
+  patient_id: string;
+
+  user_id: string;
+
+  email: string;
+
+  status: string;
+
+  message: string;
+};
+
+
+/* Appointment creation */
+
+export type AppointmentCreateRequest = {
+  title: string;
+
+  scheduled_start: string;
+
+  scheduled_end?: string | null;
+
+  appointment_type?: string | null;
+
+  provider_name?: string | null;
+
+  department?: string | null;
+
+  location_name?: string | null;
+
+  address_text?: string | null;
+
+  notes?: string | null;
+
+  patient_visible: boolean;
+};
+
+export type AppointmentCreateResponse = {
+  id: string;
+
+  patient_id: string;
+
+  journey_item_id: string;
+
+  title: string;
+
+  scheduled_start: string;
+
+  scheduled_end: string | null;
+
+  status: string;
+
+  appointment_type: string | null;
+
+  provider_name: string | null;
+
+  department: string | null;
+
+  location_name: string | null;
+
+  address_text: string | null;
+
+  notes: string | null;
+};
+
+
+/* Care journey */
+
+export type JourneyItemCreateRequest = {
+  item_type: JourneyItemType;
+
+  title: string;
+
+  description?: string | null;
+
+  scheduled_at?: string | null;
+
+  patient_visible: boolean;
+};
+
+export type JourneyItemResponse = {
+  id: string;
+
+  patient_id: string;
+
+  item_type: JourneyItemType;
+
+  status: JourneyItemStatus;
+
+  title: string;
+
+  description: string | null;
+
+  scheduled_at: string | null;
+
+  completed_at: string | null;
+
+  patient_visible: boolean;
+
+  source_type: string;
+};
+
+export type JourneyTimelineAppointment = {
+  id: string;
+
+  patient_id: string;
+
+  journey_item_id: string;
+
+  title: string;
+
+  scheduled_start: string;
+
+  scheduled_end: string | null;
+
+  status: string;
+
+  appointment_type: string | null;
+
+  provider_name: string | null;
+
+  department: string | null;
+
+  location_name: string | null;
+
+  address_text: string | null;
+
+  notes: string | null;
+};
+
+export type JourneyTimelineItem = {
+  id: string;
+
+  item_type: JourneyItemType;
+
+  status: JourneyItemStatus;
+
+  title: string;
+
+  description: string | null;
+
+  scheduled_at: string | null;
+
+  completed_at: string | null;
+
+  patient_visible: boolean;
+
+  appointment: JourneyTimelineAppointment | null;
 };
 
 

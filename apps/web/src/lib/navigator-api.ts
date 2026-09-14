@@ -3,13 +3,21 @@ import {
 } from "@/lib/api";
 
 import type {
+  AppointmentCreateRequest,
+  AppointmentCreateResponse,
+  JourneyItemCreateRequest,
+  JourneyItemResponse,
+  JourneyTimelineItem,
   NavigationTaskCreateRequest,
   NavigationTaskResponse,
   NavigationTaskUpdateRequest,
   NavigatorDashboardResponse,
   NavigatorTaskQueueItem,
   Patient360Response,
+  PatientCreateRequest,
+  PatientCreateResponse,
 } from "@/types/navigator";
+
 
 export async function getNavigatorDashboard():
 Promise<NavigatorDashboardResponse> {
@@ -22,6 +30,7 @@ Promise<NavigatorDashboardResponse> {
     },
   );
 }
+
 
 export async function getPatient360(
   patientId: string,
@@ -36,6 +45,77 @@ export async function getPatient360(
   );
 }
 
+
+export async function createPatient(
+  payload: PatientCreateRequest,
+): Promise<PatientCreateResponse> {
+  return authenticatedApiRequest<
+    PatientCreateResponse
+  >(
+    "/patients",
+    {
+      method: "POST",
+
+      body: JSON.stringify(
+        payload,
+      ),
+    },
+  );
+}
+
+
+export async function createPatientAppointment(
+  patientId: string,
+  payload: AppointmentCreateRequest,
+): Promise<AppointmentCreateResponse> {
+  return authenticatedApiRequest<
+    AppointmentCreateResponse
+  >(
+    `/patients/${patientId}/appointments`,
+    {
+      method: "POST",
+
+      body: JSON.stringify(
+        payload,
+      ),
+    },
+  );
+}
+
+
+export async function getPatientJourney(
+  patientId: string,
+): Promise<JourneyTimelineItem[]> {
+  return authenticatedApiRequest<
+    JourneyTimelineItem[]
+  >(
+    `/patients/${patientId}/journey`,
+    {
+      method: "GET",
+    },
+  );
+}
+
+
+export async function createJourneyItem(
+  patientId: string,
+  payload: JourneyItemCreateRequest,
+): Promise<JourneyItemResponse> {
+  return authenticatedApiRequest<
+    JourneyItemResponse
+  >(
+    `/patients/${patientId}/journey`,
+    {
+      method: "POST",
+
+      body: JSON.stringify(
+        payload,
+      ),
+    },
+  );
+}
+
+
 export async function resolveNavigationNeed(
   patientId: string,
   needId: string,
@@ -48,6 +128,7 @@ export async function resolveNavigationNeed(
   );
 }
 
+
 export async function createNavigationTask(
   patientId: string,
   needId: string,
@@ -59,10 +140,14 @@ export async function createNavigationTask(
     `/patients/${patientId}/needs/${needId}/tasks`,
     {
       method: "POST",
-      body: JSON.stringify(payload),
+
+      body: JSON.stringify(
+        payload,
+      ),
     },
   );
 }
+
 
 export async function updateNavigationTask(
   patientId: string,
@@ -75,10 +160,14 @@ export async function updateNavigationTask(
     `/patients/${patientId}/tasks/${taskId}`,
     {
       method: "PATCH",
-      body: JSON.stringify(payload),
+
+      body: JSON.stringify(
+        payload,
+      ),
     },
   );
 }
+
 
 export async function getNavigatorTasks():
 Promise<NavigatorTaskQueueItem[]> {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import {
   AlertCircle,
   ArrowLeft,
@@ -8,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock3,
+  Flag,
   HeartHandshake,
   LoaderCircle,
   Mail,
@@ -18,20 +20,33 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+
 import { useParams, useRouter } from "next/navigation";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppHeader } from "@/components/app/AppHeader";
+
+import { AddJourneyItemDialog } from "@/components/navigator/AddJourneyItemDialog";
+
+import { PatientDocuments } from "@/components/navigator/PatientDocuments";
+
+import { ScheduleAppointmentDialog } from "@/components/navigator/ScheduleAppointmentDialog";
+
 import { ApiError } from "@/lib/api";
+
 import {
   createNavigationTask,
   getPatient360,
+  getPatientJourney,
   updateNavigationTask,
 } from "@/lib/navigator-api";
+
 import { useAuthStore } from "@/store/auth-store";
 
 import type {
   AttentionStatus,
+  JourneyTimelineItem,
   NavigationTaskStatus,
   Patient360CheckIn,
   Patient360Need,
@@ -39,16 +54,19 @@ import type {
   Patient360Response,
   Patient360Task,
 } from "@/types/navigator";
-import { PatientDocuments } from "@/components/navigator/PatientDocuments";
 
 export default function PatientDetailPage() {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{
+    id: string;
+  }>();
 
   const router = useRouter();
 
   const logout = useAuthStore((state) => state.logout);
 
   const [patient, setPatient] = useState<Patient360Response | null>(null);
+
+  const [journeyItems, setJourneyItems] = useState<JourneyTimelineItem[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,6 +83,10 @@ export default function PatientDetailPage() {
   const [resolutionNote, setResolutionNote] = useState("");
 
   const [completionError, setCompletionError] = useState<string | null>(null);
+
+  const [showScheduleAppointment, setShowScheduleAppointment] = useState(false);
+
+  const [showAddJourneyItem, setShowAddJourneyItem] = useState(false);
 
   const handleRequestError = useCallback(
     (caughtError: unknown) => {
@@ -89,12 +111,19 @@ export default function PatientDetailPage() {
 
   const loadPatient = useCallback(async () => {
     setIsLoading(true);
+
     setError(null);
 
     try {
-      const data = await getPatient360(params.id);
+      const [patientData, journeyData] = await Promise.all([
+        getPatient360(params.id),
 
-      setPatient(data);
+        getPatientJourney(params.id),
+      ]);
+
+      setPatient(patientData);
+
+      setJourneyItems(journeyData);
     } catch (caughtError) {
       handleRequestError(caughtError);
     } finally {
@@ -107,10 +136,16 @@ export default function PatientDetailPage() {
 
     async function fetchPatient() {
       try {
-        const data = await getPatient360(params.id);
+        const [patientData, journeyData] = await Promise.all([
+          getPatient360(params.id),
+
+          getPatientJourney(params.id),
+        ]);
 
         if (!cancelled) {
-          setPatient(data);
+          setPatient(patientData);
+
+          setJourneyItems(journeyData);
         }
       } catch (caughtError) {
         if (!cancelled) {
@@ -208,6 +243,7 @@ export default function PatientDetailPage() {
     setUpdatingTaskId(completingTask.task_id);
 
     setCompletionError(null);
+
     setError(null);
 
     try {
@@ -282,14 +318,24 @@ export default function PatientDetailPage() {
                   creatingNeedId={creatingNeedId}
                   onCreateTask={handleCreateTask}
                 />
+
+                <CareJourney
+                  items={journeyItems}
+                  onAdd={() => setShowAddJourneyItem(true)}
+                />
+
                 <PatientDocuments patientId={patient.profile.patient_id} />
+
                 <RecentCheckIns patient={patient} />
 
                 <Caregivers patient={patient} />
               </div>
 
               <aside className="space-y-6">
-                <UpcomingAppointments patient={patient} />
+                <UpcomingAppointments
+                  patient={patient}
+                  onSchedule={() => setShowScheduleAppointment(true)}
+                />
 
                 <ActiveTasks
                   patient={patient}
@@ -322,6 +368,30 @@ export default function PatientDetailPage() {
           onResolutionNoteChange={setResolutionNote}
           onClose={closeCompletion}
           onSubmit={() => void handleCompleteTask()}
+        />
+      )}
+
+      {patient && showScheduleAppointment && (
+        <ScheduleAppointmentDialog
+          patientId={patient.profile.patient_id}
+          onClose={() => setShowScheduleAppointment(false)}
+          onCreated={() => {
+            setShowScheduleAppointment(false);
+
+            void loadPatient();
+          }}
+        />
+      )}
+
+      {patient && showAddJourneyItem && (
+        <AddJourneyItemDialog
+          patientId={patient.profile.patient_id}
+          onClose={() => setShowAddJourneyItem(false)}
+          onCreated={() => {
+            setShowAddJourneyItem(false);
+
+            void loadPatient();
+          }}
         />
       )}
     </main>
@@ -529,6 +599,194 @@ function NavigationNeeds({
   );
 }
 
+function CareJourney({
+  items,
+  onAdd,
+}: {
+  items: JourneyTimelineItem[];
+
+  onAdd: () => void;
+}) {
+  const visibleItems = items.filter(
+    (item) => item.item_type !== "appointment" && item.item_type !== "document",
+  );
+
+  return (
+    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Flag className="h-5 w-5 text-navy" />
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+              Care Journey
+            </p>
+
+            <h2 className="mt-1 font-semibold text-ink">
+              Planned care and milestones
+            </h2>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onAdd}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-navy-deep"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add item
+        </button>
+      </div>
+
+      <p className="mt-3 text-sm leading-6 text-ink-soft">
+        Formal care journey items created by the navigator. Appointments and
+        documents are managed separately.
+      </p>
+
+      <div className="mt-5 space-y-3">
+        {visibleItems.length === 0 ? (
+          <div className="rounded-xl bg-surface-soft p-4">
+            <p className="text-sm text-ink-soft">
+              No treatment, referral, follow-up, care task, or milestone has
+              been added yet.
+            </p>
+
+            <button
+              type="button"
+              onClick={onAdd}
+              className="mt-3 text-sm font-semibold text-navy transition hover:text-navy-deep"
+            >
+              Add the first journey item
+            </button>
+          </div>
+        ) : (
+          visibleItems.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-xl border border-border bg-surface-soft p-4"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-navy">
+                      {formatStatus(item.item_type)}
+                    </span>
+
+                    <JourneyStatusBadge status={item.status} />
+
+                    {!item.patient_visible && (
+                      <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink-soft">
+                        Navigator only
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-3 text-sm font-semibold text-ink">
+                    {item.title}
+                  </p>
+
+                  {item.description && (
+                    <p className="mt-2 text-sm leading-6 text-ink-soft">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+
+                {item.scheduled_at && (
+                  <p className="inline-flex shrink-0 items-center gap-1.5 text-xs text-ink-soft">
+                    <CalendarDays className="h-3.5 w-3.5" />
+
+                    {formatDateTime(item.scheduled_at)}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function UpcomingAppointments({
+  patient,
+  onSchedule,
+}: {
+  patient: Patient360Response;
+
+  onSchedule: () => void;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <CalendarDays className="h-5 w-5 text-navy" />
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+              Upcoming
+            </p>
+
+            <h2 className="mt-1 font-semibold text-ink">Appointments</h2>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSchedule}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-navy-deep"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Schedule
+        </button>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {patient.upcoming_appointments.length === 0 ? (
+          <div className="rounded-xl bg-surface-soft p-4">
+            <p className="text-sm text-ink-soft">No upcoming appointments.</p>
+
+            <button
+              type="button"
+              onClick={onSchedule}
+              className="mt-3 text-sm font-semibold text-navy transition hover:text-navy-deep"
+            >
+              Schedule the first appointment
+            </button>
+          </div>
+        ) : (
+          patient.upcoming_appointments.map((appointment) => (
+            <div
+              key={appointment.appointment_id}
+              className="rounded-xl bg-surface-soft p-4"
+            >
+              <p className="text-sm font-semibold text-ink">
+                {appointment.title}
+              </p>
+
+              <p className="mt-2 text-xs text-ink-soft">
+                {formatDateTime(appointment.scheduled_start)}
+              </p>
+
+              {appointment.location_name && (
+                <p className="mt-1 text-xs text-ink-soft">
+                  {appointment.location_name}
+                </p>
+              )}
+
+              {appointment.provider_name && (
+                <p className="mt-1 text-xs text-ink-soft">
+                  {appointment.provider_name}
+                </p>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ActiveTasks({
   patient,
   updatingTaskId,
@@ -661,44 +919,28 @@ function RecentResolutions({
               key={resolution.task_id}
               className="rounded-xl border border-border bg-surface-soft p-4"
             >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-priority-low-tint">
-                  <CheckCircle2 className="h-4 w-4 text-priority-low" />
-                </div>
+              <p className="text-sm font-semibold text-ink">
+                {resolution.need_title}
+              </p>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-ink">
-                        {resolution.need_title}
-                      </p>
+              <p className="mt-1 text-xs text-ink-soft">
+                Task: {resolution.task_title}
+              </p>
 
-                      <p className="mt-1 text-xs text-ink-soft">
-                        Task: {resolution.task_title}
-                      </p>
-                    </div>
+              <div className="mt-3 rounded-lg bg-white p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                  Resolution note
+                </p>
 
-                    <span className="shrink-0 rounded-full bg-priority-low-tint px-2.5 py-1 text-[11px] font-semibold text-priority-low">
-                      Resolved
-                    </span>
-                  </div>
-
-                  <div className="mt-3 rounded-lg bg-white p-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
-                      Resolution note
-                    </p>
-
-                    <p className="mt-1.5 text-sm leading-6 text-ink">
-                      {resolution.resolution_note}
-                    </p>
-                  </div>
-
-                  <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-ink-soft">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    Completed {formatDateTime(resolution.completed_at)}
-                  </p>
-                </div>
+                <p className="mt-1.5 text-sm leading-6 text-ink">
+                  {resolution.resolution_note}
+                </p>
               </div>
+
+              <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-ink-soft">
+                <Clock3 className="h-3.5 w-3.5" />
+                Completed {formatDateTime(resolution.completed_at)}
+              </p>
             </div>
           ))
         )}
@@ -779,17 +1021,6 @@ function CompleteTaskDialog({
             className="mt-2 w-full resize-none rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/60 focus:border-navy focus:bg-white disabled:opacity-60"
           />
 
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-xs text-ink-soft">
-              Required to complete the task.
-            </p>
-
-            <p className="text-xs text-ink-soft">
-              {resolutionNote.length}
-              /3000
-            </p>
-          </div>
-
           {error && (
             <div className="mt-4 rounded-xl bg-priority-high-tint p-3 text-sm text-priority-high">
               {error}
@@ -859,12 +1090,6 @@ function RecentCheckIns({ patient }: { patient: Patient360Response }) {
           ),
         )}
       </div>
-
-      {patient.recent_check_ins.length > 5 && (
-        <p className="mt-4 text-xs text-ink-soft">
-          Showing the five most recent check-ins.
-        </p>
-      )}
     </section>
   );
 }
@@ -1009,54 +1234,27 @@ function Caregivers({ patient }: { patient: Patient360Response }) {
   );
 }
 
-function UpcomingAppointments({ patient }: { patient: Patient360Response }) {
+function JourneyStatusBadge({
+  status,
+}: {
+  status: JourneyTimelineItem["status"];
+}) {
+  const styles = {
+    upcoming: "bg-gold-tint text-navy-deep",
+
+    in_progress: "bg-navy-tint text-navy",
+
+    completed: "bg-priority-low-tint text-priority-low",
+
+    cancelled: "bg-surface-soft text-ink-soft",
+  };
+
   return (
-    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6  lg:top-24">
-      <div className="flex items-center gap-3">
-        <CalendarDays className="h-5 w-5 text-navy" />
-
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Upcoming
-          </p>
-
-          <h2 className="mt-1 font-semibold text-ink">Appointments</h2>
-        </div>
-      </div>
-
-      <div className="mt-5 space-y-4">
-        {patient.upcoming_appointments.length === 0 ? (
-          <p className="text-sm text-ink-soft">No upcoming appointments.</p>
-        ) : (
-          patient.upcoming_appointments.map((appointment) => (
-            <div
-              key={appointment.appointment_id}
-              className="rounded-xl bg-surface-soft p-4"
-            >
-              <p className="text-sm font-semibold text-ink">
-                {appointment.title}
-              </p>
-
-              <p className="mt-2 text-xs text-ink-soft">
-                {formatDateTime(appointment.scheduled_start)}
-              </p>
-
-              {appointment.location_name && (
-                <p className="mt-1 text-xs text-ink-soft">
-                  {appointment.location_name}
-                </p>
-              )}
-
-              {appointment.provider_name && (
-                <p className="mt-1 text-xs text-ink-soft">
-                  {appointment.provider_name}
-                </p>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </section>
+    <span
+      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${styles[status]}`}
+    >
+      {formatStatus(status)}
+    </span>
   );
 }
 
@@ -1086,7 +1284,9 @@ function InfoItem({
   value,
 }: {
   icon: React.ReactNode;
+
   label: string;
+
   value: string;
 }) {
   return (
@@ -1124,7 +1324,14 @@ function AttentionBadge({ status }: { status: AttentionStatus }) {
   );
 }
 
-function CheckInValue({ label, value }: { label: string; value: string }) {
+function CheckInValue({
+  label,
+  value,
+}: {
+  label: string;
+
+  value: string;
+}) {
   return (
     <div className="rounded-xl bg-white p-3">
       <p className="text-xs text-ink-soft">{label}</p>
@@ -1228,9 +1435,13 @@ function formatStatus(value: string) {
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
+
     day: "numeric",
+
     year: "numeric",
+
     hour: "numeric",
+
     minute: "2-digit",
   }).format(new Date(value));
 }

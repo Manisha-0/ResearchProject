@@ -1,4 +1,5 @@
 from typing import Annotated
+import uuid
 
 from fastapi import (
     APIRouter,
@@ -11,35 +12,36 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import require_roles
 from app.core.database import get_db
-from app.models.check_in import CheckIn
-from app.models.enums import (
-    CheckInSource,
-    UserRole,
-)
-from app.models.patient import PatientProfile
-from app.models.user import User
-from app.schemas.check_in import (
-    CheckInCreateRequest,
-    CheckInResponse,
-)
-from app.services.audit_service import (
-    write_audit_log,
-)
-from app.services.signal_service import (
-    generate_signals_from_check_in,
-)
-import uuid
 
 from app.models.caregiver import (
     CaregiverPatientAccess,
     CaregiverPermission,
 )
+from app.models.check_in import CheckIn
 from app.models.enums import (
     CaregiverAccessStatus,
     CaregiverPermissionType,
     CheckInSource,
     UserRole,
 )
+from app.models.patient import PatientProfile
+from app.models.user import User
+
+from app.schemas.check_in import (
+    CheckInCreateRequest,
+    CheckInResponse,
+)
+
+from app.services.audit_service import (
+    write_audit_log,
+)
+from app.services.context_engine import (
+    evaluate_and_snapshot_patient,
+)
+from app.services.signal_service import (
+    generate_signals_from_check_in,
+)
+
 
 router = APIRouter(
     prefix="/me/check-ins",
@@ -62,7 +64,7 @@ def submit_patient_check_in(
         User,
         Depends(
             require_roles(
-                UserRole.PATIENT
+                UserRole.PATIENT,
             )
         ),
     ],
@@ -96,7 +98,9 @@ def submit_patient_check_in(
         financial_concern=(
             payload.financial_concern
         ),
-        requested_help=payload.requested_help,
+        requested_help=(
+            payload.requested_help
+        ),
         free_text=(
             payload.free_text.strip()
             if payload.free_text
@@ -107,9 +111,18 @@ def submit_patient_check_in(
     db.add(check_in)
     db.flush()
 
+    # ---------------------------------------------------------
+    # Convert the new check-in into navigation signals.
+    # ---------------------------------------------------------
+
     generate_signals_from_check_in(
         db,
         check_in=check_in,
+    )
+
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient.id,
     )
 
     write_audit_log(
@@ -150,6 +163,7 @@ def submit_patient_check_in(
         created_at=check_in.created_at,
     )
 
+
 @router.post(
     "/caregiver/patients/{patient_id}",
     response_model=CheckInResponse,
@@ -166,17 +180,20 @@ def submit_caregiver_check_in(
         User,
         Depends(
             require_roles(
-                UserRole.CAREGIVER
+                UserRole.CAREGIVER,
             )
         ),
     ],
 ) -> CheckInResponse:
     access = db.scalar(
-        select(CaregiverPatientAccess).where(
+        select(
+            CaregiverPatientAccess
+        ).where(
             CaregiverPatientAccess
             .caregiver_user_id
             == current_user.id,
-            CaregiverPatientAccess.patient_id
+            CaregiverPatientAccess
+            .patient_id
             == patient_id,
             CaregiverPatientAccess.status
             == CaregiverAccessStatus.ACTIVE,
@@ -190,7 +207,9 @@ def submit_caregiver_check_in(
         )
 
     permission = db.scalar(
-        select(CaregiverPermission).where(
+        select(
+            CaregiverPermission
+        ).where(
             CaregiverPermission
             .caregiver_access_id
             == access.id,
@@ -225,7 +244,9 @@ def submit_caregiver_check_in(
         financial_concern=(
             payload.financial_concern
         ),
-        requested_help=payload.requested_help,
+        requested_help=(
+            payload.requested_help
+        ),
         free_text=(
             payload.free_text.strip()
             if payload.free_text
@@ -239,9 +260,23 @@ def submit_caregiver_check_in(
     db.add(check_in)
     db.flush()
 
+    # ---------------------------------------------------------
+    # Generate navigation signals from caregiver-reported data.
+    # ---------------------------------------------------------
+
     generate_signals_from_check_in(
         db,
         check_in=check_in,
+    )
+
+    # ---------------------------------------------------------
+    # Keep Navigation Needs and Attention Status synchronized
+    # immediately after the caregiver submission as well.
+    # ---------------------------------------------------------
+
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient_id,
     )
 
     write_audit_log(
