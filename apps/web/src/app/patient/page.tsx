@@ -7,18 +7,12 @@ import {
   LoaderCircle,
   MapPin,
 } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import {
-  useRouter,
-} from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { AppHeader } from "@/components/app/AppHeader";
 import { Appointments } from "@/components/patient/Appointments";
+import { CaregiverAccess } from "@/components/patient/CaregiverAccess";
 import { CareJourney } from "@/components/patient/CareJourney";
 import { CheckInForm } from "@/components/patient/CheckInForm";
 import { PatientDocuments } from "@/components/patient/PatientDocuments";
@@ -37,90 +31,65 @@ import type {
 export default function PatientPage() {
   const router = useRouter();
 
-  const logout = useAuthStore(
-    (state) => state.logout,
+  const logout = useAuthStore((state) => state.logout);
+
+  const [journey, setJourney] = useState<PatientJourneyItem[]>([]);
+
+  const [latestCheckIn, setLatestCheckIn] = useState<CheckInResponse | null>(
+    null,
   );
 
-  const [journey, setJourney] =
-    useState<PatientJourneyItem[]>(
-      [],
-    );
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [
-    latestCheckIn,
-    setLatestCheckIn,
-  ] =
-    useState<CheckInResponse | null>(
-      null,
-    );
+  const [error, setError] = useState<string | null>(null);
 
-  const [isLoading, setIsLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState<string | null>(null);
-
-  const handleRequestError =
-    useCallback(
-      (caughtError: unknown) => {
-        if (
-          caughtError instanceof
-            ApiError &&
-          caughtError.status === 401
-        ) {
-          logout();
-          router.replace("/login");
-          return true;
-        }
-
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Unable to load your care journey.",
-        );
-
-        return false;
-      },
-      [logout, router],
-    );
-
-  const loadJourney = useCallback(
-    async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const data =
-          await getMyJourney();
-
-        setJourney(data);
-      } catch (caughtError) {
-        handleRequestError(
-          caughtError,
-        );
-      } finally {
-        setIsLoading(false);
+  const handleRequestError = useCallback(
+    (caughtError: unknown) => {
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        logout();
+        router.replace("/login");
+        return true;
       }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to load your care journey.",
+      );
+
+      return false;
     },
-    [handleRequestError],
+    [logout, router],
   );
+
+  const loadJourney = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await getMyJourney();
+
+      setJourney(data);
+    } catch (caughtError) {
+      handleRequestError(caughtError);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleRequestError]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchJourney() {
       try {
-        const data =
-          await getMyJourney();
+        const data = await getMyJourney();
 
         if (!cancelled) {
           setJourney(data);
         }
       } catch (caughtError) {
         if (!cancelled) {
-          handleRequestError(
-            caughtError,
-          );
+          handleRequestError(caughtError);
         }
       } finally {
         if (!cancelled) {
@@ -136,23 +105,15 @@ export default function PatientPage() {
     };
   }, [handleRequestError]);
 
-  const appointments =
-    useMemo(
-      () =>
-        getAppointmentsFromJourney(
-          journey,
-        ),
-      [journey],
-    );
+  const appointments = useMemo(
+    () => getAppointmentsFromJourney(journey),
+    [journey],
+  );
 
-  const nextAppointment =
-    useMemo(
-      () =>
-        getNextAppointment(
-          appointments,
-        ),
-      [appointments],
-    );
+  const nextAppointment = useMemo(
+    () => getNextAppointment(appointments),
+    [appointments],
+  );
 
   return (
     <main className="min-h-screen bg-surface-soft">
@@ -160,82 +121,54 @@ export default function PatientPage() {
 
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
         <section>
-          <p className="text-sm text-ink-soft">
-            Welcome back.
-          </p>
+          <p className="text-sm text-ink-soft">Welcome back.</p>
 
           <h1 className="mt-1 font-display text-3xl font-bold text-navy-deep">
             My Compass
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
-            Everything Compass knows about
-            your navigation journey is
-            organized here — what&apos;s
-            happened, what&apos;s next, and
-            where you may need support.
+            Everything Compass knows about your navigation journey is organized
+            here — what&apos;s happened, what&apos;s next, and where you may
+            need support.
           </p>
         </section>
 
-        {isLoading && (
-          <LoadingState />
+        {isLoading && <LoadingState />}
+
+        {!isLoading && error && (
+          <ErrorState message={error} onRetry={() => void loadJourney()} />
         )}
 
-        {!isLoading &&
-          error && (
-            <ErrorState
-              message={error}
-              onRetry={() =>
-                void loadJourney()
-              }
+        {!isLoading && !error && (
+          <>
+            <NextStep
+              appointment={nextAppointment}
+              latestCheckIn={latestCheckIn}
             />
-          )}
 
-        {!isLoading &&
-          !error && (
-            <>
-              <NextStep
-                appointment={
-                  nextAppointment
-                }
-                latestCheckIn={
-                  latestCheckIn
-                }
-              />
+            <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="space-y-6">
+                <CareJourney journey={journey} />
 
-              <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                <div className="space-y-6">
-                  <CareJourney
-                    journey={journey}
-                  />
+                <PatientDocuments />
 
-                  <PatientDocuments />
-                </div>
-
-                <div className="space-y-6">
-                  <CheckInForm
-                    onSubmitted={
-                      setLatestCheckIn
-                    }
-                  />
-
-                  <Appointments
-                    appointments={
-                      appointments
-                    }
-                  />
-                </div>
+                <CaregiverAccess />
               </div>
 
-              <p className="mt-8 text-center text-xs leading-5 text-ink-soft">
-                Compass uses synthetic demo
-                patient information and
-                supports navigation and
-                coordination. It does not
-                make clinical decisions.
-              </p>
-            </>
-          )}
+              <div className="space-y-6">
+                <CheckInForm onSubmitted={setLatestCheckIn} />
+
+                <Appointments appointments={appointments} />
+              </div>
+            </div>
+
+            <p className="mt-8 text-center text-xs leading-5 text-ink-soft">
+              Compass uses synthetic demo patient information and supports
+              navigation and coordination. It does not make clinical decisions.
+            </p>
+          </>
+        )}
       </div>
     </main>
   );
@@ -245,13 +178,9 @@ function NextStep({
   appointment,
   latestCheckIn,
 }: {
-  appointment:
-    | PatientAppointment
-    | null;
+  appointment: PatientAppointment | null;
 
-  latestCheckIn:
-    | CheckInResponse
-    | null;
+  latestCheckIn: CheckInResponse | null;
 }) {
   return (
     <section className="mt-8 rounded-2xl border border-border bg-white p-5 sm:p-6">
@@ -271,21 +200,15 @@ function NextStep({
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 shrink-0 text-navy" />
 
-                  {formatDateTime(
-                    appointment.scheduled_start,
-                  )}
+                  {formatDateTime(appointment.scheduled_start)}
                 </div>
 
-                {(appointment.location_name ||
-                  appointment.address_text) && (
+                {(appointment.location_name || appointment.address_text) && (
                   <div className="flex items-start gap-2">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
 
                     <span>
-                      {[
-                        appointment.location_name,
-                        appointment.address_text,
-                      ]
+                      {[appointment.location_name, appointment.address_text]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -294,14 +217,8 @@ function NextStep({
 
                 <div className="flex items-center gap-2">
                   <Car className="h-4 w-4 shrink-0 text-navy" />
-
                   Transportation:{" "}
-
-                  <strong>
-                    {getTransportationLabel(
-                      latestCheckIn,
-                    )}
-                  </strong>
+                  <strong>{getTransportationLabel(latestCheckIn)}</strong>
                 </div>
               </div>
             </>
@@ -312,9 +229,8 @@ function NextStep({
               </h2>
 
               <p className="mt-3 text-sm leading-6 text-ink-soft">
-                Your care navigation team
-                has not added an upcoming
-                appointment yet.
+                Your care navigation team has not added an upcoming appointment
+                yet.
               </p>
             </>
           )}
@@ -326,10 +242,8 @@ function NextStep({
           </p>
 
           <p className="mt-2 text-sm leading-6 text-navy-deep">
-            Complete today&apos;s check-in
-            so your navigator knows if
-            anything has changed before
-            your next step.
+            Complete today&apos;s check-in so your navigator knows if anything
+            has changed before your next step.
           </p>
         </div>
       </div>
@@ -365,13 +279,10 @@ function ErrorState({
 
         <div>
           <p className="font-semibold text-ink">
-            Unable to load your Compass
-            journey
+            Unable to load your Compass journey
           </p>
 
-          <p className="mt-1 text-sm text-ink-soft">
-            {message}
-          </p>
+          <p className="mt-1 text-sm text-ink-soft">{message}</p>
 
           <button
             type="button"
@@ -386,92 +297,54 @@ function ErrorState({
   );
 }
 
-function getAppointmentsFromJourney(
-  journey: PatientJourneyItem[],
-) {
-  const appointments =
-    journey.flatMap((item) =>
-      item.appointment
-        ? [item.appointment]
-        : [],
-    );
+function getAppointmentsFromJourney(journey: PatientJourneyItem[]) {
+  const appointments = journey.flatMap((item) =>
+    item.appointment ? [item.appointment] : [],
+  );
 
-  const uniqueAppointments =
-    new Map<
-      string,
-      PatientAppointment
-    >();
+  const uniqueAppointments = new Map<string, PatientAppointment>();
 
   for (const appointment of appointments) {
-    uniqueAppointments.set(
-      appointment.id,
-      appointment,
-    );
+    uniqueAppointments.set(appointment.id, appointment);
   }
 
-  return Array.from(
-    uniqueAppointments.values(),
-  );
+  return Array.from(uniqueAppointments.values());
 }
 
-function getNextAppointment(
-  appointments: PatientAppointment[],
-) {
-  const scheduled =
-    appointments
-      .filter(
-        (appointment) =>
-          appointment.status ===
-          "scheduled",
-      )
-      .sort(
-        (first, second) =>
-          new Date(
-            first.scheduled_start,
-          ).getTime() -
-          new Date(
-            second.scheduled_start,
-          ).getTime(),
-      );
+function getNextAppointment(appointments: PatientAppointment[]) {
+  const scheduled = appointments
+    .filter((appointment) => appointment.status === "scheduled")
+    .sort(
+      (first, second) =>
+        new Date(first.scheduled_start).getTime() -
+        new Date(second.scheduled_start).getTime(),
+    );
 
   return scheduled[0] ?? null;
 }
 
-function getTransportationLabel(
-  checkIn: CheckInResponse | null,
-) {
+function getTransportationLabel(checkIn: CheckInResponse | null) {
   if (!checkIn) {
     return "Check in today";
   }
 
-  if (
-    checkIn.transportation_confirmed ===
-    true
-  ) {
+  if (checkIn.transportation_confirmed === true) {
     return "Confirmed";
   }
 
-  if (
-    checkIn.transportation_confirmed ===
-    false
-  ) {
+  if (checkIn.transportation_confirmed === false) {
     return "Needs help";
   }
 
   return "Not sure";
 }
 
-function formatDateTime(
-  value: string,
-) {
-  return new Intl.DateTimeFormat(
-    "en-US",
-    {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    },
-  ).format(new Date(value));
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
