@@ -22,6 +22,9 @@ export type PatientDocument = {
   uploaded_by_user_id:
     string;
 
+  patient_visible:
+    boolean;
+
   created_at: string;
 };
 

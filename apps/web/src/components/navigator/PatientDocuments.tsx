@@ -4,8 +4,11 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
+  Eye,
+  EyeOff,
   FileText,
   LoaderCircle,
+  Trash2,
   Upload,
   X,
 } from "lucide-react";
@@ -14,6 +17,7 @@ import { useRouter } from "next/navigation";
 
 import {
   type ChangeEvent,
+  SubmitEventHandler,
   useCallback,
   useEffect,
   useRef,
@@ -24,6 +28,7 @@ import { ApiError } from "@/lib/api";
 
 import {
   createDocumentAccess,
+  deletePatientDocument,
   getPatientDocuments,
   uploadPatientDocument,
 } from "@/lib/document-api";
@@ -76,6 +81,11 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(
     null,
   );
+
+  const [documentToDelete, setDocumentToDelete] =
+    useState<PatientDocument | null>(null);
+
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleError = useCallback(
     (caughtError: unknown, fallback: string) => {
@@ -142,11 +152,6 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
     try {
       const result = await createDocumentAccess(patientId, document.id);
 
-      /*
-       * Use a temporary anchor instead
-       * of assigning storage URLs into
-       * the application state.
-       */
       const link = window.document.createElement("a");
 
       link.href = result.url;
@@ -167,6 +172,44 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
     }
   }
 
+  async function handleDeleteConfirmed() {
+    if (!documentToDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    setError(null);
+
+    try {
+      await deletePatientDocument(patientId, documentToDelete.id);
+
+      setDocuments((currentDocuments) =>
+        currentDocuments.filter(
+          (document) => document.id !== documentToDelete.id,
+        ),
+      );
+
+      setDocumentToDelete(null);
+    } catch (caughtError) {
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        logout();
+
+        router.replace("/login");
+
+        return;
+      }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to delete the document.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <>
       <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
@@ -184,7 +227,8 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
               <h2 className="mt-1 font-semibold text-ink">Patient records</h2>
 
               <p className="mt-1 text-sm leading-6 text-ink-soft">
-                Navigator-uploaded documents associated with this care journey.
+                Secure documents associated with this patient&apos;s care
+                journey.
               </p>
             </div>
           </div>
@@ -228,6 +272,7 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
                   document={document}
                   isOpening={openingDocumentId === document.id}
                   onOpen={() => void handleOpenDocument(document)}
+                  onDelete={() => setDocumentToDelete(document)}
                 />
               ))}
             </div>
@@ -251,6 +296,19 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
           }}
         />
       )}
+
+      {documentToDelete && (
+        <DeleteDocumentDialog
+          document={documentToDelete}
+          isDeleting={isDeleting}
+          onCancel={() => {
+            if (!isDeleting) {
+              setDocumentToDelete(null);
+            }
+          }}
+          onConfirm={() => void handleDeleteConfirmed()}
+        />
+      )}
     </>
   );
 }
@@ -259,12 +317,15 @@ function DocumentCard({
   document,
   isOpening,
   onOpen,
+  onDelete,
 }: {
   document: PatientDocument;
 
   isOpening: boolean;
 
   onOpen: () => void;
+
+  onDelete: () => void;
 }) {
   return (
     <div className="rounded-xl border border-border bg-surface-soft p-4">
@@ -279,6 +340,18 @@ function DocumentCard({
               <span className="rounded-full bg-gold-tint px-2.5 py-1 text-[11px] font-semibold text-navy-deep">
                 {formatDocumentType(document.document_type)}
               </span>
+
+              {document.patient_visible ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-priority-low-tint px-2.5 py-1 text-[11px] font-semibold text-priority-low">
+                  <Eye className="h-3 w-3" />
+                  Patient visible
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-soft">
+                  <EyeOff className="h-3 w-3" />
+                  Navigator only
+                </span>
+              )}
             </div>
 
             <p className="mt-2 break-all text-sm font-semibold text-ink">
@@ -287,26 +360,111 @@ function DocumentCard({
 
             <p className="mt-1 text-xs text-ink-soft">
               {formatFileSize(document.file_size_bytes)}
+
               {" · "}
+
               {formatDate(document.created_at)}
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={isOpening}
-          onClick={onOpen}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isOpening ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-          ) : (
-            <ExternalLink className="h-4 w-4" />
-          )}
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            disabled={isOpening}
+            onClick={onOpen}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isOpening ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="h-4 w-4" />
+            )}
 
-          {isOpening ? "Opening..." : "View PDF"}
-        </button>
+            {isOpening ? "Opening..." : "View PDF"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-priority-high/20 bg-white px-3.5 py-2.5 text-xs font-semibold text-priority-high transition hover:bg-priority-high-tint"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteDocumentDialog({
+  document,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  document: PatientDocument;
+
+  isDeleting: boolean;
+
+  onCancel: () => void;
+
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/55 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white shadow-2xl">
+        <div className="p-5 sm:p-6">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-priority-high-tint text-priority-high">
+            <Trash2 className="h-5 w-5" />
+          </div>
+
+          <h2 className="mt-4 text-lg font-semibold text-ink">
+            Delete document?
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-ink-soft">
+            This will remove
+            <strong className="mx-1 text-ink">
+              {document.original_filename}
+            </strong>
+            from the patient&apos;s Compass record.
+          </p>
+
+          <div className="mt-4 rounded-xl bg-priority-high-tint p-3">
+            <p className="text-xs leading-5 text-priority-high">
+              This action removes the document metadata and attempts to remove
+              the private stored PDF. It cannot be undone from Compass.
+            </p>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={onCancel}
+              className="rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface-soft disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={onConfirm}
+              className="inline-flex items-center gap-2 rounded-lg bg-priority-high px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isDeleting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+
+              {isDeleting ? "Deleting..." : "Delete document"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -348,6 +506,8 @@ function UploadDocumentDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [documentType, setDocumentType] = useState<DocumentType>("referral");
+
+  const [patientVisible, setPatientVisible] = useState(true);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -401,9 +561,7 @@ function UploadDocumentDialog({
     setSelectedFile(file);
   }
 
-  const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = async (
-    event,
-  ) => {
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
 
     if (!selectedFile) {
@@ -417,7 +575,12 @@ function UploadDocumentDialog({
     setIsSubmitting(true);
 
     try {
-      await uploadPatientDocument(patientId, documentType, selectedFile);
+      await uploadPatientDocument(
+        patientId,
+        documentType,
+        selectedFile,
+        patientVisible,
+      );
 
       await onUploaded();
     } catch (caughtError) {
@@ -524,6 +687,46 @@ function UploadDocumentDialog({
             </button>
           </div>
 
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface-soft p-4">
+            <input
+              type="checkbox"
+              checked={patientVisible}
+              disabled={isSubmitting}
+              onChange={(event) => setPatientVisible(event.target.checked)}
+              className="mt-1 h-4 w-4 accent-navy"
+            />
+
+            <div>
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-navy" />
+
+                <p className="text-sm font-semibold text-ink">
+                  Share with patient
+                </p>
+              </div>
+
+              <p className="mt-1 text-xs leading-5 text-ink-soft">
+                When enabled, the patient can view this document. An authorized
+                caregiver may also view it when they have document permission.
+              </p>
+            </div>
+          </label>
+
+          {!patientVisible && (
+            <div className="mt-3 flex items-start gap-3 rounded-xl bg-surface-soft p-3">
+              <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
+
+              <div>
+                <p className="text-xs font-semibold text-ink">Navigator only</p>
+
+                <p className="mt-1 text-xs leading-5 text-ink-soft">
+                  This document will not appear in the patient or caregiver
+                  portal.
+                </p>
+              </div>
+            </div>
+          )}
+
           {selectedFile && (
             <div className="mt-4 flex items-start gap-3 rounded-xl bg-priority-low-tint p-3">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-priority-low" />
@@ -534,7 +737,7 @@ function UploadDocumentDialog({
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-ink-soft">
-                  The document will be stored in private patient storage and
+                  The document will remain in private storage and can only be
                   accessed through Compass authorization.
                 </p>
               </div>

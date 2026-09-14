@@ -27,6 +27,7 @@ export async function uploadPatientDocument(
   patientId: string,
   documentType: DocumentType,
   file: File,
+  patientVisible: boolean,
 ): Promise<PatientDocument> {
   const formData =
     new FormData();
@@ -34,6 +35,13 @@ export async function uploadPatientDocument(
   formData.append(
     "document_type",
     documentType,
+  );
+
+  formData.append(
+    "patient_visible",
+    String(
+      patientVisible,
+    ),
   );
 
   formData.append(
@@ -47,7 +55,6 @@ export async function uploadPatientDocument(
     `/patients/${patientId}/documents`,
     {
       method: "POST",
-
       body: formData,
     },
   );
@@ -64,6 +71,19 @@ export async function createDocumentAccess(
     `/patients/${patientId}/documents/${documentId}/access`,
     {
       method: "POST",
+    },
+  );
+}
+
+
+export async function deletePatientDocument(
+  patientId: string,
+  documentId: string,
+): Promise<void> {
+  return authenticatedApiRequest<void>(
+    `/patients/${patientId}/documents/${documentId}`,
+    {
+      method: "DELETE",
     },
   );
 }

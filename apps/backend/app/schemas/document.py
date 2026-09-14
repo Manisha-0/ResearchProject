@@ -1,7 +1,6 @@
 import uuid
 
 from datetime import datetime
-
 from typing import Literal
 
 from pydantic import BaseModel
@@ -18,7 +17,6 @@ DocumentType = Literal[
 
 class DocumentResponse(BaseModel):
     id: uuid.UUID
-
     patient_id: uuid.UUID
 
     document_type: DocumentType
@@ -30,6 +28,8 @@ class DocumentResponse(BaseModel):
     file_size_bytes: int
 
     uploaded_by_user_id: uuid.UUID
+
+    patient_visible: bool
 
     created_at: datetime
 

@@ -1,8 +1,6 @@
-import uuid
-
 from pathlib import Path
-
 from typing import Annotated
+import uuid
 
 from fastapi import (
     APIRouter,
@@ -13,46 +11,22 @@ from fastapi import (
     UploadFile,
     status,
 )
-
 from sqlalchemy import select
-
-from sqlalchemy.exc import (
-    SQLAlchemyError,
-)
-
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.auth import (
-    require_roles,
-)
-
+from app.core.auth import require_roles
 from app.core.config import settings
-
 from app.core.database import get_db
-
-from app.models.document import (
-    Document,
-)
-
-from app.models.enums import (
-    UserRole,
-)
-
+from app.models.document import Document
+from app.models.enums import UserRole
 from app.models.user import User
-
 from app.schemas.document import (
     DocumentAccessResponse,
     DocumentResponse,
 )
-
-from app.services.audit_service import (
-    write_audit_log,
-)
-
-from app.services.permissions import (
-    get_patient_for_navigator,
-)
-
+from app.services.audit_service import write_audit_log
+from app.services.permissions import get_patient_for_navigator
 from app.services.storage_service import (
     StorageServiceError,
     create_document_access_url,
@@ -67,10 +41,7 @@ router = APIRouter(
 )
 
 
-MAX_DOCUMENT_SIZE_BYTES = (
-    10 * 1024 * 1024
-)
-
+MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024
 
 ALLOWED_DOCUMENT_TYPES = {
     "referral",
@@ -81,13 +52,57 @@ ALLOWED_DOCUMENT_TYPES = {
 }
 
 
+def build_document_response(
+    document: Document,
+) -> DocumentResponse:
+    return DocumentResponse(
+        id=document.id,
+        patient_id=document.patient_id,
+        document_type=document.document_type,
+        original_filename=document.original_filename,
+        content_type=document.content_type,
+        file_size_bytes=document.file_size_bytes,
+        uploaded_by_user_id=document.uploaded_by_user_id,
+        patient_visible=document.patient_visible,
+        created_at=document.created_at,
+    )
+
+
+def get_document_for_navigator(
+    db: Session,
+    *,
+    patient_id: uuid.UUID,
+    document_id: uuid.UUID,
+    current_user: User,
+) -> tuple[object, Document]:
+    patient = get_patient_for_navigator(
+        db,
+        patient_id=patient_id,
+        navigator=current_user,
+    )
+
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.patient_id == patient.id,
+            Document.organization_id == current_user.organization_id,
+        )
+    )
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    return patient, document
+
+
 @router.get(
     "",
-    response_model=list[
-        DocumentResponse
-    ],
+    response_model=list[DocumentResponse],
 )
-def list_documents(
+def list_patient_documents(
     patient_id: uuid.UUID,
     db: Annotated[
         Session,
@@ -97,12 +112,12 @@ def list_documents(
         User,
         Depends(
             require_roles(
-                UserRole.NAVIGATOR
+                UserRole.NAVIGATOR,
             )
         ),
     ],
 ) -> list[DocumentResponse]:
-    get_patient_for_navigator(
+    patient = get_patient_for_navigator(
         db,
         patient_id=patient_id,
         navigator=current_user,
@@ -111,20 +126,16 @@ def list_documents(
     documents = db.scalars(
         select(Document)
         .where(
-            Document.patient_id
-            == patient_id,
-            Document.organization_id
-            == current_user.organization_id,
+            Document.patient_id == patient.id,
+            Document.organization_id == current_user.organization_id,
         )
         .order_by(
-            Document.created_at.desc()
+            Document.created_at.desc(),
         )
     ).all()
 
     return [
-        build_document_response(
-            document
-        )
+        build_document_response(document)
         for document in documents
     ]
 
@@ -132,131 +143,85 @@ def list_documents(
 @router.post(
     "",
     response_model=DocumentResponse,
-    status_code=(
-        status.HTTP_201_CREATED
-    ),
+    status_code=status.HTTP_201_CREATED,
 )
 async def upload_patient_document(
     patient_id: uuid.UUID,
-    db: Annotated[
-        Session,
-        Depends(get_db),
-    ],
-    current_user: Annotated[
-        User,
-        Depends(
-            require_roles(
-                UserRole.NAVIGATOR
-            )
-        ),
-    ],
     document_type: Annotated[
         str,
         Form(),
     ],
+    patient_visible: Annotated[
+        bool,
+        Form(),
+    ] = True,
     file: Annotated[
         UploadFile,
         File(),
-    ],
+    ] = None,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ] = None,
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.NAVIGATOR,
+            )
+        ),
+    ] = None,
 ) -> DocumentResponse:
-    patient = (
-        get_patient_for_navigator(
-            db,
-            patient_id=patient_id,
-            navigator=current_user,
-        )
+    patient = get_patient_for_navigator(
+        db,
+        patient_id=patient_id,
+        navigator=current_user,
     )
 
-    normalized_document_type = (
-        document_type
-        .strip()
-        .lower()
-    )
-
-    if (
-        normalized_document_type
-        not in ALLOWED_DOCUMENT_TYPES
-    ):
+    if document_type not in ALLOWED_DOCUMENT_TYPES:
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_422_UNPROCESSABLE_ENTITY
-            ),
-            detail=(
-                "Invalid document type."
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported document type.",
         )
 
-    original_filename = (
-        Path(
-            file.filename
-            or "document.pdf"
-        ).name
-    )
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A PDF document is required.",
+        )
 
-    if not (
+    original_filename = Path(
+        file.filename or "document.pdf"
+    ).name
+
+    if Path(
         original_filename
-        .lower()
-        .endswith(".pdf")
-    ):
+    ).suffix.lower() != ".pdf":
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_415_UNSUPPORTED_MEDIA_TYPE
-            ),
-            detail=(
-                "Only PDF documents "
-                "are supported."
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF documents are supported.",
         )
 
     content = await file.read(
-        MAX_DOCUMENT_SIZE_BYTES
-        + 1
+        MAX_DOCUMENT_SIZE_BYTES + 1
     )
-
-    await file.close()
 
     if not content:
         raise HTTPException(
-            status_code=(
-                status.HTTP_400_BAD_REQUEST
-            ),
-            detail=(
-                "The uploaded document "
-                "is empty."
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded PDF is empty.",
         )
 
-    if (
-        len(content)
-        > MAX_DOCUMENT_SIZE_BYTES
-    ):
+    if len(content) > MAX_DOCUMENT_SIZE_BYTES:
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_413_CONTENT_TOO_LARGE
-            ),
-            detail=(
-                "Document exceeds the "
-                "10 MB upload limit."
-            ),
+            status_code=413,
+            detail="The PDF exceeds the 10 MB upload limit.",
         )
 
-    # Do not rely only on filename or
-    # browser-provided Content-Type.
-    if not content.startswith(
-        b"%PDF-"
-    ):
+    if not content.startswith(b"%PDF-"):
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_415_UNSUPPORTED_MEDIA_TYPE
-            ),
-            detail=(
-                "The uploaded file is "
-                "not a valid PDF."
-            ),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is not a valid PDF.",
         )
 
     document_id = uuid.uuid4()
@@ -276,47 +241,24 @@ async def upload_patient_document(
             storage_path=storage_path,
             content=content,
         )
-
     except StorageServiceError as exc:
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_502_BAD_GATEWAY
-            ),
-            detail=(
-                "Unable to store the "
-                "document."
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to store the document.",
         ) from exc
 
     document = Document(
         id=document_id,
-        organization_id=(
-            current_user.organization_id
-        ),
+        organization_id=current_user.organization_id,
         patient_id=patient.id,
-        uploaded_by_user_id=(
-            current_user.id
-        ),
-        document_type=(
-            normalized_document_type
-        ),
-        original_filename=(
-            original_filename
-        ),
-        storage_bucket=(
-            settings
-            .supabase_storage_bucket
-        ),
-        storage_path=(
-            storage_path
-        ),
-        content_type=(
-            "application/pdf"
-        ),
-        file_size_bytes=(
-            len(content)
-        ),
+        uploaded_by_user_id=current_user.id,
+        document_type=document_type,
+        original_filename=original_filename,
+        storage_bucket=settings.supabase_storage_bucket,
+        storage_path=storage_path,
+        content_type="application/pdf",
+        file_size_bytes=len(content),
+        patient_visible=patient_visible,
     )
 
     try:
@@ -324,61 +266,35 @@ async def upload_patient_document(
 
         write_audit_log(
             db,
-            organization_id=(
-                current_user
-                .organization_id
-            ),
-            actor_user_id=(
-                current_user.id
-            ),
+            organization_id=current_user.organization_id,
+            actor_user_id=current_user.id,
             patient_id=patient.id,
-            action=(
-                "PATIENT_DOCUMENT_UPLOADED"
-            ),
+            action="PATIENT_DOCUMENT_UPLOADED",
             resource_type="document",
-            resource_id=str(
-                document.id
-            ),
+            resource_id=document.id,
             metadata_json={
-                "document_type": (
-                    normalized_document_type
-                ),
-                "original_filename": (
-                    original_filename
-                ),
-                "file_size_bytes": (
-                    len(content)
-                ),
+                "document_type": document_type,
+                "original_filename": original_filename,
+                "patient_visible": patient_visible,
             },
         )
 
         db.commit()
-
-        db.refresh(
-            document
-        )
+        db.refresh(document)
 
     except SQLAlchemyError as exc:
         db.rollback()
 
         try:
             delete_document(
-                storage_path=(
-                    storage_path
-                ),
+                storage_path=storage_path,
             )
         except StorageServiceError:
             pass
 
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_500_INTERNAL_SERVER_ERROR
-            ),
-            detail=(
-                "Unable to save document "
-                "metadata."
-            ),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save document metadata.",
         ) from exc
 
     return build_document_response(
@@ -388,11 +304,9 @@ async def upload_patient_document(
 
 @router.post(
     "/{document_id}/access",
-    response_model=(
-        DocumentAccessResponse
-    ),
+    response_model=DocumentAccessResponse,
 )
-def create_document_access(
+def create_patient_document_access(
     patient_id: uuid.UUID,
     document_id: uuid.UUID,
     db: Annotated[
@@ -403,116 +317,113 @@ def create_document_access(
         User,
         Depends(
             require_roles(
-                UserRole.NAVIGATOR
+                UserRole.NAVIGATOR,
             )
         ),
     ],
 ) -> DocumentAccessResponse:
-    get_patient_for_navigator(
+    patient, document = get_document_for_navigator(
         db,
         patient_id=patient_id,
-        navigator=current_user,
+        document_id=document_id,
+        current_user=current_user,
     )
-
-    document = db.scalar(
-        select(Document).where(
-            Document.id
-            == document_id,
-            Document.patient_id
-            == patient_id,
-            Document.organization_id
-            == current_user.organization_id,
-        )
-    )
-
-    if document is None:
-        raise HTTPException(
-            status_code=(
-                status.HTTP_404_NOT_FOUND
-            ),
-            detail=(
-                "Document not found."
-            ),
-        )
-
-    expires_in_seconds = 300
 
     try:
-        url = (
-            create_document_access_url(
-                storage_path=(
-                    document.storage_path
-                ),
-                expires_in_seconds=(
-                    expires_in_seconds
-                ),
-            )
+        url = create_document_access_url(
+            storage_path=document.storage_path,
+            expires_in_seconds=300,
         )
-
     except StorageServiceError as exc:
         raise HTTPException(
-            status_code=(
-                status
-                .HTTP_502_BAD_GATEWAY
-            ),
-            detail=(
-                "Unable to access the "
-                "document."
-            ),
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to create document access URL.",
         ) from exc
 
     write_audit_log(
         db,
-        organization_id=(
-            current_user.organization_id
-        ),
-        actor_user_id=(
-            current_user.id
-        ),
-        patient_id=patient_id,
-        action=(
-            "PATIENT_DOCUMENT_ACCESSED"
-        ),
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        patient_id=patient.id,
+        action="PATIENT_DOCUMENT_ACCESSED",
         resource_type="document",
-        resource_id=str(
-            document.id
-        ),
+        resource_id=document.id,
+        metadata_json={
+            "original_filename": document.original_filename,
+        },
     )
 
     db.commit()
 
     return DocumentAccessResponse(
         url=url,
-        expires_in_seconds=(
-            expires_in_seconds
-        ),
+        expires_in_seconds=300,
     )
 
 
-def build_document_response(
-    document: Document,
-) -> DocumentResponse:
-    return DocumentResponse(
-        id=document.id,
-        patient_id=(
-            document.patient_id
+@router.delete(
+    "/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_patient_document(
+    patient_id: uuid.UUID,
+    document_id: uuid.UUID,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.NAVIGATOR,
+            )
         ),
-        document_type=(
-            document.document_type
-        ),
-        original_filename=(
-            document.original_filename
-        ),
-        content_type=(
-            document.content_type
-        ),
-        file_size_bytes=(
-            document.file_size_bytes
-        ),
-        uploaded_by_user_id=(
-            document.uploaded_by_user_id
-        ),
-        created_at=(
-            document.created_at
-        ),
+    ],
+) -> None:
+    patient, document = get_document_for_navigator(
+        db,
+        patient_id=patient_id,
+        document_id=document_id,
+        current_user=current_user,
     )
+
+    storage_path = document.storage_path
+    original_filename = document.original_filename
+    patient_visible = document.patient_visible
+
+    try:
+        write_audit_log(
+            db,
+            organization_id=current_user.organization_id,
+            actor_user_id=current_user.id,
+            patient_id=patient.id,
+            action="PATIENT_DOCUMENT_DELETED",
+            resource_type="document",
+            resource_id=document.id,
+            metadata_json={
+                "original_filename": original_filename,
+                "patient_visible": patient_visible,
+            },
+        )
+
+        db.delete(document)
+        db.commit()
+
+    except SQLAlchemyError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to delete document.",
+        ) from exc
+
+    try:
+        delete_document(
+            storage_path=storage_path,
+        )
+    except StorageServiceError:
+        # The database record has already been removed.
+        # If storage cleanup fails, the private object is
+        # orphaned but can no longer be accessed through Compass.
+        pass

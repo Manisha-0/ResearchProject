@@ -109,3 +109,8 @@ class Document(
         BigInteger,
         nullable=False,
     )
+
+    patient_visible: Mapped[bool] = mapped_column(
+    default=True,
+    nullable=False,
+    )

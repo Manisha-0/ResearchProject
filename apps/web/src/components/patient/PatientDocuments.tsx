@@ -1,42 +1,463 @@
+"use client";
+
 import {
+  AlertCircle,
+  ExternalLink,
   FileText,
+  LoaderCircle,
 } from "lucide-react";
 
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  ApiError,
+} from "@/lib/api";
+
+import {
+  createMyDocumentAccess,
+  getMyDocuments,
+} from "@/lib/patient-document-api";
+
+import {
+  useAuthStore,
+} from "@/store/auth-store";
+
+import type {
+  DocumentType,
+  PatientDocument,
+} from "@/types/document";
+
+
 export function PatientDocuments() {
+  const router =
+    useRouter();
+
+  const logout =
+    useAuthStore(
+      (state) =>
+        state.logout,
+    );
+
+  const [
+    documents,
+    setDocuments,
+  ] =
+    useState<
+      PatientDocument[]
+    >([]);
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
+    useState(true);
+
+  const [
+    error,
+    setError,
+  ] =
+    useState<
+      string | null
+    >(null);
+
+  const [
+    openingDocumentId,
+    setOpeningDocumentId,
+  ] =
+    useState<
+      string | null
+    >(null);
+
+
+  const handleError =
+    useCallback(
+      (
+        caughtError:
+          unknown,
+        fallback:
+          string,
+      ) => {
+        if (
+          caughtError instanceof
+            ApiError &&
+          caughtError.status ===
+            401
+        ) {
+          logout();
+
+          router.replace(
+            "/login",
+          );
+
+          return;
+        }
+
+        setError(
+          caughtError instanceof
+            Error
+            ? caughtError.message
+            : fallback,
+        );
+      },
+      [
+        logout,
+        router,
+      ],
+    );
+
+
+  useEffect(() => {
+    let cancelled =
+      false;
+
+    async function loadDocuments() {
+      try {
+        const result =
+          await getMyDocuments();
+
+        if (
+          !cancelled
+        ) {
+          setDocuments(
+            result,
+          );
+        }
+      } catch (
+        caughtError
+      ) {
+        if (
+          !cancelled
+        ) {
+          handleError(
+            caughtError,
+            "Unable to load your documents.",
+          );
+        }
+      } finally {
+        if (
+          !cancelled
+        ) {
+          setIsLoading(
+            false,
+          );
+        }
+      }
+    }
+
+    void loadDocuments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    handleError,
+  ]);
+
+
+  async function handleOpenDocument(
+    document:
+      PatientDocument,
+  ) {
+    setOpeningDocumentId(
+      document.id,
+    );
+
+    setError(null);
+
+    try {
+      const result =
+        await createMyDocumentAccess(
+          document.id,
+        );
+
+      const link =
+        window.document
+          .createElement(
+            "a",
+          );
+
+      link.href =
+        result.url;
+
+      link.target =
+        "_blank";
+
+      link.rel =
+        "noopener noreferrer";
+
+      window.document.body
+        .appendChild(
+          link,
+        );
+
+      link.click();
+
+      link.remove();
+    } catch (
+      caughtError
+    ) {
+      handleError(
+        caughtError,
+        "Unable to open this document.",
+      );
+    } finally {
+      setOpeningDocumentId(
+        null,
+      );
+    }
+  }
+
+
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-        My Documents
-      </p>
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-tint text-navy">
+          <FileText className="h-5 w-5" />
+        </div>
 
-      <h2 className="mt-1 text-xl font-semibold text-navy-deep">
-        Care information
-      </h2>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            Documents
+          </p>
 
-      <p className="mt-2 text-sm leading-6 text-ink-soft">
-        Documents shared by your
-        navigation team will appear here.
-      </p>
+          <h2 className="mt-1 font-semibold text-ink">
+            My documents
+          </h2>
 
-      <div className="mt-6 rounded-xl bg-surface-soft p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-tint">
-            <FileText className="h-4 w-4 text-navy" />
+          <p className="mt-1 text-sm leading-6 text-ink-soft">
+            Documents your navigation
+            team has shared with you.
+          </p>
+        </div>
+      </div>
+
+
+      {error && (
+        <div className="mt-5 flex items-start gap-3 rounded-xl bg-priority-high-tint p-4 text-sm text-priority-high">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
+          <p>
+            {error}
+          </p>
+        </div>
+      )}
+
+
+      <div className="mt-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <LoaderCircle className="h-5 w-5 animate-spin text-navy" />
+
+            <p className="ml-3 text-sm text-ink-soft">
+              Loading documents...
+            </p>
+          </div>
+        ) : documents.length ===
+          0 ? (
+          <EmptyDocuments />
+        ) : (
+          <div className="space-y-3">
+            {documents.map(
+              (
+                document,
+              ) => (
+                <DocumentCard
+                  key={
+                    document.id
+                  }
+                  document={
+                    document
+                  }
+                  isOpening={
+                    openingDocumentId ===
+                    document.id
+                  }
+                  onOpen={() =>
+                    void handleOpenDocument(
+                      document,
+                    )
+                  }
+                />
+              ),
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+
+function DocumentCard({
+  document,
+  isOpening,
+  onOpen,
+}: {
+  document:
+    PatientDocument;
+
+  isOpening:
+    boolean;
+
+  onOpen:
+    () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-soft p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-navy">
+            <FileText className="h-4 w-4" />
           </div>
 
-          <div>
-            <p className="text-sm font-semibold text-ink">
-              No documents available
+          <div className="min-w-0">
+            <span className="inline-flex rounded-full bg-gold-tint px-2.5 py-1 text-[11px] font-semibold text-navy-deep">
+              {formatDocumentType(
+                document.document_type,
+              )}
+            </span>
+
+            <p className="mt-2 break-all text-sm font-semibold text-ink">
+              {
+                document.original_filename
+              }
             </p>
 
-            <p className="mt-1 text-sm leading-6 text-ink-soft">
-              Patient document access has
-              not yet been connected to the
-              Compass API.
+            <p className="mt-1 text-xs text-ink-soft">
+              {formatFileSize(
+                document.file_size_bytes,
+              )}
+
+              {" · "}
+
+              {formatDate(
+                document.created_at,
+              )}
             </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          disabled={
+            isOpening
+          }
+          onClick={
+            onOpen
+          }
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isOpening ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <ExternalLink className="h-4 w-4" />
+          )}
+
+          {isOpening
+            ? "Opening..."
+            : "View PDF"}
+        </button>
       </div>
-    </section>
+    </div>
+  );
+}
+
+
+function EmptyDocuments() {
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-surface-soft px-5 py-8 text-center">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white text-navy">
+        <FileText className="h-5 w-5" />
+      </div>
+
+      <p className="mt-4 text-sm font-semibold text-ink">
+        No shared documents yet
+      </p>
+
+      <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-ink-soft">
+        Documents shared by your
+        navigation team will appear
+        here.
+      </p>
+    </div>
+  );
+}
+
+
+function formatDocumentType(
+  type: DocumentType,
+) {
+  const labels: Record<
+    DocumentType,
+    string
+  > = {
+    referral:
+      "Referral",
+
+    care_plan:
+      "Care Plan",
+
+    discharge_instructions:
+      "Discharge Instructions",
+
+    administrative:
+      "Administrative",
+
+    other:
+      "Other",
+  };
+
+  return labels[type];
+}
+
+
+function formatFileSize(
+  bytes: number,
+) {
+  if (
+    bytes < 1024
+  ) {
+    return `${bytes} B`;
+  }
+
+  const kilobytes =
+    bytes / 1024;
+
+  if (
+    kilobytes < 1024
+  ) {
+    return `${kilobytes.toFixed(
+      kilobytes >= 100
+        ? 0
+        : 1,
+    )} KB`;
+  }
+
+  return `${(
+    kilobytes / 1024
+  ).toFixed(1)} MB`;
+}
+
+
+function formatDate(
+  value: string,
+) {
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    },
+  ).format(
+    new Date(value),
   );
 }
