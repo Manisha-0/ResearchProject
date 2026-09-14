@@ -29,6 +29,8 @@ import { AppHeader } from "@/components/app/AppHeader";
 
 import { AddJourneyItemDialog } from "@/components/navigator/AddJourneyItemDialog";
 
+import PatientCopilot from "@/components/navigator/PatientCopilot";
+
 import { PatientDocuments } from "@/components/navigator/PatientDocuments";
 
 import { ScheduleAppointmentDialog } from "@/components/navigator/ScheduleAppointmentDialog";
@@ -88,12 +90,16 @@ export default function PatientDetailPage() {
 
   const [showAddJourneyItem, setShowAddJourneyItem] = useState(false);
 
+  const handleUnauthorized = useCallback(() => {
+    logout();
+
+    router.replace("/login");
+  }, [logout, router]);
+
   const handleRequestError = useCallback(
     (caughtError: unknown) => {
       if (caughtError instanceof ApiError && caughtError.status === 401) {
-        logout();
-
-        router.replace("/login");
+        handleUnauthorized();
 
         return true;
       }
@@ -101,12 +107,12 @@ export default function PatientDetailPage() {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to load Patient 360.",
+          : "Unable to load " + "Patient 360.",
       );
 
       return false;
     },
-    [logout, router],
+    [handleUnauthorized],
   );
 
   const loadPatient = useCallback(async () => {
@@ -272,7 +278,7 @@ export default function PatientDetailPage() {
       setCompletionError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to complete the task.",
+          : "Unable to complete " + "the task.",
       );
     } finally {
       setUpdatingTaskId(null);
@@ -311,6 +317,12 @@ export default function PatientDetailPage() {
             <div className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
               <div className="space-y-6">
                 <AttentionOverview patient={patient} />
+
+                <PatientCopilot
+                  patientId={patient.profile.patient_id}
+                  patientName={`${patient.profile.first_name} ${patient.profile.last_name}`}
+                  onUnauthorized={handleUnauthorized}
+                />
 
                 <NavigationNeeds
                   needs={patient.open_needs}
