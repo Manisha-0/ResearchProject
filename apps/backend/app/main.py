@@ -58,6 +58,8 @@ from app.routers.documents import (
 from app.routers.my_documents import (
     router as my_documents_router,
 )
+from app.routers import copilot
+
 app = FastAPI(
     title=settings.app_name,
     debug=settings.debug,
@@ -97,6 +99,9 @@ app.include_router(
 )
 app.include_router(
     my_documents_router,
+)
+app.include_router(
+    copilot.router
 )
 
 app.add_middleware(

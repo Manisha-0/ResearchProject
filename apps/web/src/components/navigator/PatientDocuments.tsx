@@ -2,12 +2,20 @@
 
 import {
   AlertCircle,
+  Brain,
+  CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   Eye,
   EyeOff,
   FileText,
+  Info,
+  Lightbulb,
   LoaderCircle,
+  RefreshCw,
+  Sparkles,
   Trash2,
   Upload,
   X,
@@ -29,13 +37,19 @@ import { ApiError } from "@/lib/api";
 import {
   createDocumentAccess,
   deletePatientDocument,
+  generateDocumentSummary,
+  getDocumentSummary,
   getPatientDocuments,
   uploadPatientDocument,
 } from "@/lib/document-api";
 
 import { useAuthStore } from "@/store/auth-store";
 
-import type { DocumentType, PatientDocument } from "@/types/document";
+import type {
+  DocumentSummary,
+  DocumentType,
+  PatientDocument,
+} from "@/types/document";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -269,10 +283,16 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
               {documents.map((document) => (
                 <DocumentCard
                   key={document.id}
+                  patientId={patientId}
                   document={document}
                   isOpening={openingDocumentId === document.id}
                   onOpen={() => void handleOpenDocument(document)}
                   onDelete={() => setDocumentToDelete(document)}
+                  onUnauthorized={() => {
+                    logout();
+
+                    router.replace("/login");
+                  }}
                 />
               ))}
             </div>
@@ -314,11 +334,15 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
 }
 
 function DocumentCard({
+  patientId,
   document,
   isOpening,
   onOpen,
   onDelete,
+  onUnauthorized,
 }: {
+  patientId: string;
+
   document: PatientDocument;
 
   isOpening: boolean;
@@ -326,74 +350,374 @@ function DocumentCard({
   onOpen: () => void;
 
   onDelete: () => void;
+
+  onUnauthorized: () => void;
 }) {
+  const [summary, setSummary] = useState<DocumentSummary | null>(null);
+
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchSummary() {
+      try {
+        const result = await getDocumentSummary(patientId, document.id);
+
+        if (!cancelled) {
+          setSummary(result);
+
+          setIsExpanded(true);
+        }
+      } catch (caughtError) {
+        if (caughtError instanceof ApiError && caughtError.status === 404) {
+          return;
+        }
+
+        if (caughtError instanceof ApiError && caughtError.status === 401) {
+          onUnauthorized();
+
+          return;
+        }
+
+        if (!cancelled) {
+          setSummaryError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Unable to load AI summary.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSummaryLoading(false);
+        }
+      }
+    }
+
+    void fetchSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [document.id, onUnauthorized, patientId]);
+
+  async function handleGenerateSummary() {
+    setIsGenerating(true);
+
+    setSummaryError(null);
+
+    try {
+      const result = await generateDocumentSummary(patientId, document.id);
+
+      setSummary(result);
+
+      setIsExpanded(true);
+    } catch (caughtError) {
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        onUnauthorized();
+
+        return;
+      }
+
+      setSummaryError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to generate AI summary.",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   return (
-    <div className="rounded-xl border border-border bg-surface-soft p-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-navy">
-            <FileText className="h-4 w-4" />
-          </div>
-
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-gold-tint px-2.5 py-1 text-[11px] font-semibold text-navy-deep">
-                {formatDocumentType(document.document_type)}
-              </span>
-
-              {document.patient_visible ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-priority-low-tint px-2.5 py-1 text-[11px] font-semibold text-priority-low">
-                  <Eye className="h-3 w-3" />
-                  Patient visible
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-soft">
-                  <EyeOff className="h-3 w-3" />
-                  Navigator only
-                </span>
-              )}
+    <div className="overflow-hidden rounded-xl border border-border bg-surface-soft">
+      <div className="p-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-navy">
+              <FileText className="h-4 w-4" />
             </div>
 
-            <p className="mt-2 break-all text-sm font-semibold text-ink">
-              {document.original_filename}
-            </p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-gold-tint px-2.5 py-1 text-[11px] font-semibold text-navy-deep">
+                  {formatDocumentType(document.document_type)}
+                </span>
 
-            <p className="mt-1 text-xs text-ink-soft">
-              {formatFileSize(document.file_size_bytes)}
+                {document.patient_visible ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-priority-low-tint px-2.5 py-1 text-[11px] font-semibold text-priority-low">
+                    <Eye className="h-3 w-3" />
+                    Patient visible
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] font-semibold text-ink-soft">
+                    <EyeOff className="h-3 w-3" />
+                    Navigator only
+                  </span>
+                )}
 
-              {" · "}
+                {summary && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-navy-tint px-2.5 py-1 text-[11px] font-semibold text-navy">
+                    <Sparkles className="h-3 w-3" />
+                    AI summary
+                  </span>
+                )}
+              </div>
 
-              {formatDate(document.created_at)}
-            </p>
+              <p className="mt-2 break-all text-sm font-semibold text-ink">
+                {document.original_filename}
+              </p>
+
+              <p className="mt-1 text-xs text-ink-soft">
+                {formatFileSize(document.file_size_bytes)}
+
+                {" · "}
+
+                {formatDate(document.created_at)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={isOpening}
+              onClick={onOpen}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isOpening ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <ExternalLink className="h-4 w-4" />
+              )}
+
+              {isOpening ? "Opening..." : "View PDF"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onDelete}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-priority-high/20 bg-white px-3.5 py-2.5 text-xs font-semibold text-priority-high transition hover:bg-priority-high-tint"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            disabled={isOpening}
-            onClick={onOpen}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isOpening ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : (
-              <ExternalLink className="h-4 w-4" />
-            )}
+        <div className="mt-4 border-t border-border pt-4">
+          {isSummaryLoading ? (
+            <div className="flex items-center gap-2 text-xs text-ink-soft">
+              <LoaderCircle className="h-4 w-4 animate-spin text-navy" />
+              Checking AI summary...
+            </div>
+          ) : summary ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => setIsExpanded((current) => !current)}
+                className="inline-flex items-center gap-2 text-left"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy-tint text-navy">
+                  <Brain className="h-4 w-4" />
+                </div>
 
-            {isOpening ? "Opening..." : "View PDF"}
-          </button>
+                <div>
+                  <p className="text-xs font-semibold text-navy">
+                    AI Navigator Summary
+                  </p>
 
-          <button
-            type="button"
-            onClick={onDelete}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-priority-high/20 bg-white px-3.5 py-2.5 text-xs font-semibold text-priority-high transition hover:bg-priority-high-tint"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
+                  <p className="mt-0.5 text-[11px] text-ink-soft">
+                    Generated from this document
+                  </p>
+                </div>
+
+                {isExpanded ? (
+                  <ChevronUp className="ml-1 h-4 w-4 text-ink-soft" />
+                ) : (
+                  <ChevronDown className="ml-1 h-4 w-4 text-ink-soft" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() => void handleGenerateSummary()}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isGenerating ? (
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+
+                {isGenerating ? "Regenerating..." : "Regenerate"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-xl bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-tint text-navy">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    AI Navigator Summary
+                  </p>
+
+                  <p className="mt-1 text-xs leading-5 text-ink-soft">
+                    Generate a navigation-focused summary from this document.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={isGenerating}
+                onClick={() => void handleGenerateSummary()}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isGenerating ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+
+                {isGenerating ? "Generating..." : "Generate summary"}
+              </button>
+            </div>
+          )}
+
+          {summaryError && (
+            <div className="mt-3 flex items-start gap-3 rounded-xl bg-priority-high-tint p-3 text-xs text-priority-high">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+
+              <p>{summaryError}</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {summary && isExpanded && <DocumentSummaryPanel summary={summary} />}
+    </div>
+  );
+}
+
+function DocumentSummaryPanel({ summary }: { summary: DocumentSummary }) {
+  return (
+    <div className="border-t border-border bg-white p-4 sm:p-5">
+      <div className="rounded-xl border border-navy/10 bg-navy-tint/30 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-navy">
+            <Brain className="h-4 w-4" />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+              AI Navigator Summary
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-ink">{summary.summary}</p>
+          </div>
+        </div>
+      </div>
+
+      {summary.key_details.length > 0 && (
+        <SummarySection
+          icon={<FileText className="h-4 w-4" />}
+          title="Key details"
+          items={summary.key_details}
+        />
+      )}
+
+      {summary.navigation_actions.length > 0 && (
+        <SummarySection
+          icon={<Lightbulb className="h-4 w-4" />}
+          title="Navigation actions"
+          items={summary.navigation_actions}
+        />
+      )}
+
+      {summary.important_dates.length > 0 && (
+        <SummarySection
+          icon={<CalendarDays className="h-4 w-4" />}
+          title="Important dates"
+          items={summary.important_dates}
+        />
+      )}
+
+      {summary.limitations.length > 0 && (
+        <SummarySection
+          icon={<Info className="h-4 w-4" />}
+          title="Limitations"
+          items={summary.limitations}
+        />
+      )}
+
+      <div className="mt-5 rounded-xl border border-border bg-surface-soft p-3">
+        <div className="flex items-start gap-2">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+
+          <p className="text-[11px] leading-5 text-ink-soft">
+            AI-generated from this document for navigation support. It does not
+            determine clinical urgency or Compass Attention Status.
+          </p>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-ink-soft">
+          <span>Model: {summary.model_name}</span>
+
+          <span>Generated: {formatDateTime(summary.updated_at)}</span>
+
+          {summary.source_truncated && (
+            <span className="font-semibold text-gold">
+              Source text truncated
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummarySection({
+  icon,
+  title,
+  items,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  items: string[];
+}) {
+  return (
+    <div className="mt-5">
+      <div className="flex items-center gap-2 text-navy">
+        {icon}
+
+        <h4 className="text-xs font-semibold uppercase tracking-wide">
+          {title}
+        </h4>
+      </div>
+
+      <ul className="mt-2 space-y-2">
+        {items.map((item, index) => (
+          <li
+            key={`${title}-${index}`}
+            className="flex items-start gap-2 text-sm leading-6 text-ink"
+          >
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -434,8 +758,9 @@ function DeleteDocumentDialog({
 
           <div className="mt-4 rounded-xl bg-priority-high-tint p-3">
             <p className="text-xs leading-5 text-priority-high">
-              This action removes the document metadata and attempts to remove
-              the private stored PDF. It cannot be undone from Compass.
+              This action removes the document metadata, its AI summary, and
+              attempts to remove the private stored PDF. It cannot be undone
+              from Compass.
             </p>
           </div>
 
@@ -785,13 +1110,9 @@ function UploadDocumentDialog({
 function formatDocumentType(type: DocumentType) {
   const labels: Record<DocumentType, string> = {
     referral: "Referral",
-
     care_plan: "Care Plan",
-
     discharge_instructions: "Discharge Instructions",
-
     administrative: "Administrative",
-
     other: "Other",
   };
 
@@ -819,5 +1140,15 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
     year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(value));
 }

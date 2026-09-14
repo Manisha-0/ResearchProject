@@ -12,25 +12,47 @@ from fastapi import (
     status,
 )
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import (
+    SQLAlchemyError,
+)
 from sqlalchemy.orm import Session
 
 from app.core.auth import require_roles
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.document import Document
+
+from app.models.document import (
+    Document,
+    DocumentSummary,
+)
 from app.models.enums import UserRole
 from app.models.user import User
+
 from app.schemas.document import (
     DocumentAccessResponse,
     DocumentResponse,
+    DocumentSummaryResponse,
 )
-from app.services.audit_service import write_audit_log
-from app.services.permissions import get_patient_for_navigator
+
+from app.services.audit_service import (
+    write_audit_log,
+)
+
+from app.services.document_summary_service import (
+    DocumentSummaryServiceError,
+    extract_pdf_text,
+    generate_document_summary,
+)
+
+from app.services.permissions import (
+    get_patient_for_navigator,
+)
+
 from app.services.storage_service import (
     StorageServiceError,
     create_document_access_url,
     delete_document,
+    download_document,
     upload_document,
 )
 
@@ -41,7 +63,9 @@ router = APIRouter(
 )
 
 
-MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024
+MAX_DOCUMENT_SIZE_BYTES = (
+    10 * 1024 * 1024
+)
 
 ALLOWED_DOCUMENT_TYPES = {
     "referral",
@@ -58,13 +82,62 @@ def build_document_response(
     return DocumentResponse(
         id=document.id,
         patient_id=document.patient_id,
-        document_type=document.document_type,
-        original_filename=document.original_filename,
-        content_type=document.content_type,
-        file_size_bytes=document.file_size_bytes,
-        uploaded_by_user_id=document.uploaded_by_user_id,
-        patient_visible=document.patient_visible,
-        created_at=document.created_at,
+        document_type=(
+            document.document_type
+        ),
+        original_filename=(
+            document.original_filename
+        ),
+        content_type=(
+            document.content_type
+        ),
+        file_size_bytes=(
+            document.file_size_bytes
+        ),
+        uploaded_by_user_id=(
+            document.uploaded_by_user_id
+        ),
+        patient_visible=(
+            document.patient_visible
+        ),
+        created_at=(
+            document.created_at
+        ),
+    )
+
+
+def build_summary_response(
+    summary: DocumentSummary,
+) -> DocumentSummaryResponse:
+    return DocumentSummaryResponse(
+        id=summary.id,
+        document_id=summary.document_id,
+        patient_id=summary.patient_id,
+        model_name=summary.model_name,
+        summary=summary.summary,
+        key_details=(
+            summary.key_details
+        ),
+        navigation_actions=(
+            summary.navigation_actions
+        ),
+        important_dates=(
+            summary.important_dates
+        ),
+        limitations=(
+            summary.limitations
+        ),
+        source_character_count=(
+            summary.source_character_count
+        ),
+        source_truncated=(
+            summary.source_truncated
+        ),
+        generated_by_user_id=(
+            summary.generated_by_user_id
+        ),
+        created_at=summary.created_at,
+        updated_at=summary.updated_at,
     )
 
 
@@ -83,15 +156,20 @@ def get_document_for_navigator(
 
     document = db.scalar(
         select(Document).where(
-            Document.id == document_id,
-            Document.patient_id == patient.id,
-            Document.organization_id == current_user.organization_id,
+            Document.id
+            == document_id,
+            Document.patient_id
+            == patient.id,
+            Document.organization_id
+            == current_user.organization_id,
         )
     )
 
     if document is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+            ),
             detail="Document not found.",
         )
 
@@ -100,7 +178,9 @@ def get_document_for_navigator(
 
 @router.get(
     "",
-    response_model=list[DocumentResponse],
+    response_model=list[
+        DocumentResponse
+    ],
 )
 def list_patient_documents(
     patient_id: uuid.UUID,
@@ -117,17 +197,21 @@ def list_patient_documents(
         ),
     ],
 ) -> list[DocumentResponse]:
-    patient = get_patient_for_navigator(
-        db,
-        patient_id=patient_id,
-        navigator=current_user,
+    patient = (
+        get_patient_for_navigator(
+            db,
+            patient_id=patient_id,
+            navigator=current_user,
+        )
     )
 
     documents = db.scalars(
         select(Document)
         .where(
-            Document.patient_id == patient.id,
-            Document.organization_id == current_user.organization_id,
+            Document.patient_id
+            == patient.id,
+            Document.organization_id
+            == current_user.organization_id,
         )
         .order_by(
             Document.created_at.desc(),
@@ -135,7 +219,9 @@ def list_patient_documents(
     ).all()
 
     return [
-        build_document_response(document)
+        build_document_response(
+            document
+        )
         for document in documents
     ]
 
@@ -143,7 +229,9 @@ def list_patient_documents(
 @router.post(
     "",
     response_model=DocumentResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=(
+        status.HTTP_201_CREATED
+    ),
 )
 async def upload_patient_document(
     patient_id: uuid.UUID,
@@ -172,34 +260,56 @@ async def upload_patient_document(
         ),
     ] = None,
 ) -> DocumentResponse:
-    patient = get_patient_for_navigator(
-        db,
-        patient_id=patient_id,
-        navigator=current_user,
+    patient = (
+        get_patient_for_navigator(
+            db,
+            patient_id=patient_id,
+            navigator=current_user,
+        )
     )
 
-    if document_type not in ALLOWED_DOCUMENT_TYPES:
+    if (
+        document_type
+        not in ALLOWED_DOCUMENT_TYPES
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unsupported document type.",
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+            detail=(
+                "Unsupported document type."
+            ),
         )
 
     if file is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A PDF document is required.",
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+            detail=(
+                "A PDF document is required."
+            ),
         )
 
     original_filename = Path(
-        file.filename or "document.pdf"
+        file.filename
+        or "document.pdf"
     ).name
 
-    if Path(
-        original_filename
-    ).suffix.lower() != ".pdf":
+    if (
+        Path(
+            original_filename
+        ).suffix.lower()
+        != ".pdf"
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF documents are supported.",
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+            detail=(
+                "Only PDF documents "
+                "are supported."
+            ),
         )
 
     content = await file.read(
@@ -208,20 +318,37 @@ async def upload_patient_document(
 
     if not content:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The uploaded PDF is empty.",
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+            detail=(
+                "The uploaded PDF is empty."
+            ),
         )
 
-    if len(content) > MAX_DOCUMENT_SIZE_BYTES:
+    if (
+        len(content)
+        > MAX_DOCUMENT_SIZE_BYTES
+    ):
         raise HTTPException(
             status_code=413,
-            detail="The PDF exceeds the 10 MB upload limit.",
+            detail=(
+                "The PDF exceeds the "
+                "10 MB upload limit."
+            ),
         )
 
-    if not content.startswith(b"%PDF-"):
+    if not content.startswith(
+        b"%PDF-"
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The uploaded file is not a valid PDF.",
+            status_code=(
+                status.HTTP_400_BAD_REQUEST
+            ),
+            detail=(
+                "The uploaded file is "
+                "not a valid PDF."
+            ),
         )
 
     document_id = uuid.uuid4()
@@ -241,24 +368,41 @@ async def upload_patient_document(
             storage_path=storage_path,
             content=content,
         )
+
     except StorageServiceError as exc:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to store the document.",
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
+            detail=(
+                "Unable to store "
+                "the document."
+            ),
         ) from exc
 
     document = Document(
         id=document_id,
-        organization_id=current_user.organization_id,
+        organization_id=(
+            current_user.organization_id
+        ),
         patient_id=patient.id,
-        uploaded_by_user_id=current_user.id,
+        uploaded_by_user_id=(
+            current_user.id
+        ),
         document_type=document_type,
-        original_filename=original_filename,
-        storage_bucket=settings.supabase_storage_bucket,
+        original_filename=(
+            original_filename
+        ),
+        storage_bucket=(
+            settings
+            .supabase_storage_bucket
+        ),
         storage_path=storage_path,
         content_type="application/pdf",
         file_size_bytes=len(content),
-        patient_visible=patient_visible,
+        patient_visible=(
+            patient_visible
+        ),
     )
 
     try:
@@ -266,16 +410,26 @@ async def upload_patient_document(
 
         write_audit_log(
             db,
-            organization_id=current_user.organization_id,
-            actor_user_id=current_user.id,
+            organization_id=(
+                current_user
+                .organization_id
+            ),
+            actor_user_id=(
+                current_user.id
+            ),
             patient_id=patient.id,
-            action="PATIENT_DOCUMENT_UPLOADED",
+            action=(
+                "PATIENT_DOCUMENT_UPLOADED"
+            ),
             resource_type="document",
             resource_id=document.id,
             metadata_json={
-                "document_type": document_type,
-                "original_filename": original_filename,
-                "patient_visible": patient_visible,
+                "document_type":
+                    document_type,
+                "original_filename":
+                    original_filename,
+                "patient_visible":
+                    patient_visible,
             },
         )
 
@@ -287,14 +441,22 @@ async def upload_patient_document(
 
         try:
             delete_document(
-                storage_path=storage_path,
+                storage_path=(
+                    storage_path
+                ),
             )
         except StorageServiceError:
             pass
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to save document metadata.",
+            status_code=(
+                status
+                .HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "Unable to save "
+                "document metadata."
+            ),
         ) from exc
 
     return build_document_response(
@@ -304,7 +466,9 @@ async def upload_patient_document(
 
 @router.post(
     "/{document_id}/access",
-    response_model=DocumentAccessResponse,
+    response_model=(
+        DocumentAccessResponse
+    ),
 )
 def create_patient_document_access(
     patient_id: uuid.UUID,
@@ -322,34 +486,53 @@ def create_patient_document_access(
         ),
     ],
 ) -> DocumentAccessResponse:
-    patient, document = get_document_for_navigator(
-        db,
-        patient_id=patient_id,
-        document_id=document_id,
-        current_user=current_user,
+    patient, document = (
+        get_document_for_navigator(
+            db,
+            patient_id=patient_id,
+            document_id=document_id,
+            current_user=current_user,
+        )
     )
 
     try:
-        url = create_document_access_url(
-            storage_path=document.storage_path,
-            expires_in_seconds=300,
+        url = (
+            create_document_access_url(
+                storage_path=(
+                    document.storage_path
+                ),
+                expires_in_seconds=300,
+            )
         )
+
     except StorageServiceError as exc:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Unable to create document access URL.",
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
+            detail=(
+                "Unable to create "
+                "document access URL."
+            ),
         ) from exc
 
     write_audit_log(
         db,
-        organization_id=current_user.organization_id,
-        actor_user_id=current_user.id,
+        organization_id=(
+            current_user.organization_id
+        ),
+        actor_user_id=(
+            current_user.id
+        ),
         patient_id=patient.id,
-        action="PATIENT_DOCUMENT_ACCESSED",
+        action=(
+            "PATIENT_DOCUMENT_ACCESSED"
+        ),
         resource_type="document",
         resource_id=document.id,
         metadata_json={
-            "original_filename": document.original_filename,
+            "original_filename":
+                document.original_filename,
         },
     )
 
@@ -361,9 +544,290 @@ def create_patient_document_access(
     )
 
 
+@router.get(
+    "/{document_id}/summary",
+    response_model=(
+        DocumentSummaryResponse
+    ),
+)
+def get_document_summary(
+    patient_id: uuid.UUID,
+    document_id: uuid.UUID,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.NAVIGATOR,
+            )
+        ),
+    ],
+) -> DocumentSummaryResponse:
+    _, document = (
+        get_document_for_navigator(
+            db,
+            patient_id=patient_id,
+            document_id=document_id,
+            current_user=current_user,
+        )
+    )
+
+    summary = db.scalar(
+        select(
+            DocumentSummary
+        ).where(
+            DocumentSummary.document_id
+            == document.id,
+            DocumentSummary.patient_id
+            == document.patient_id,
+            DocumentSummary.organization_id
+            == current_user.organization_id,
+        )
+    )
+
+    if summary is None:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+            ),
+            detail=(
+                "Document summary "
+                "not found."
+            ),
+        )
+
+    return build_summary_response(
+        summary
+    )
+
+
+@router.post(
+    "/{document_id}/summarize",
+    response_model=(
+        DocumentSummaryResponse
+    ),
+)
+def summarize_patient_document(
+    patient_id: uuid.UUID,
+    document_id: uuid.UUID,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.NAVIGATOR,
+            )
+        ),
+    ],
+) -> DocumentSummaryResponse:
+    patient, document = (
+        get_document_for_navigator(
+            db,
+            patient_id=patient_id,
+            document_id=document_id,
+            current_user=current_user,
+        )
+    )
+
+    try:
+        content = download_document(
+            storage_path=(
+                document.storage_path
+            )
+        )
+
+    except StorageServiceError as exc:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_502_BAD_GATEWAY
+            ),
+            detail=(
+                "Unable to retrieve "
+                "the document."
+            ),
+        ) from exc
+
+    try:
+        document_text = (
+            extract_pdf_text(
+                content
+            )
+        )
+
+        (
+            generated,
+            source_character_count,
+            source_truncated,
+        ) = generate_document_summary(
+            document_text=(
+                document_text
+            ),
+            document_type=(
+                document.document_type
+            ),
+            original_filename=(
+                document.original_filename
+            ),
+        )
+
+    except (
+        DocumentSummaryServiceError
+    ) as exc:
+        raise HTTPException(
+            status_code=(
+                status
+                .HTTP_422_UNPROCESSABLE_CONTENT
+            ),
+            detail=str(exc),
+        ) from exc
+
+    summary = db.scalar(
+        select(
+            DocumentSummary
+        ).where(
+            DocumentSummary.document_id
+            == document.id
+        )
+    )
+
+    if summary is None:
+        summary = DocumentSummary(
+            document_id=document.id,
+            organization_id=(
+                current_user.organization_id
+            ),
+            patient_id=patient.id,
+            generated_by_user_id=(
+                current_user.id
+            ),
+            model_name=(
+                settings.gemini_model
+            ),
+            summary=generated.summary,
+            key_details=(
+                generated.key_details
+            ),
+            navigation_actions=(
+                generated.navigation_actions
+            ),
+            important_dates=(
+                generated.important_dates
+            ),
+            limitations=(
+                generated.limitations
+            ),
+            source_character_count=(
+                source_character_count
+            ),
+            source_truncated=(
+                source_truncated
+            ),
+        )
+
+        db.add(summary)
+
+    else:
+        summary.generated_by_user_id = (
+            current_user.id
+        )
+
+        summary.model_name = (
+            settings.gemini_model
+        )
+
+        summary.summary = (
+            generated.summary
+        )
+
+        summary.key_details = (
+            generated.key_details
+        )
+
+        summary.navigation_actions = (
+            generated.navigation_actions
+        )
+
+        summary.important_dates = (
+            generated.important_dates
+        )
+
+        summary.limitations = (
+            generated.limitations
+        )
+
+        summary.source_character_count = (
+            source_character_count
+        )
+
+        summary.source_truncated = (
+            source_truncated
+        )
+
+    try:
+        db.flush()
+
+        write_audit_log(
+            db,
+            organization_id=(
+                current_user
+                .organization_id
+            ),
+            actor_user_id=(
+                current_user.id
+            ),
+            patient_id=patient.id,
+            action=(
+                "PATIENT_DOCUMENT_SUMMARIZED"
+            ),
+            resource_type=(
+                "document_summary"
+            ),
+            resource_id=summary.id,
+            metadata_json={
+                "document_id":
+                    str(document.id),
+                "model":
+                    settings.gemini_model,
+                "source_character_count":
+                    source_character_count,
+                "source_truncated":
+                    source_truncated,
+            },
+        )
+
+        db.commit()
+        db.refresh(summary)
+
+    except SQLAlchemyError as exc:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=(
+                status
+                .HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "Unable to save "
+                "document summary."
+            ),
+        ) from exc
+
+    return build_summary_response(
+        summary
+    )
+
+
 @router.delete(
     "/{document_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=(
+        status.HTTP_204_NO_CONTENT
+    ),
 )
 def delete_patient_document(
     patient_id: uuid.UUID,
@@ -381,29 +845,48 @@ def delete_patient_document(
         ),
     ],
 ) -> None:
-    patient, document = get_document_for_navigator(
-        db,
-        patient_id=patient_id,
-        document_id=document_id,
-        current_user=current_user,
+    patient, document = (
+        get_document_for_navigator(
+            db,
+            patient_id=patient_id,
+            document_id=document_id,
+            current_user=current_user,
+        )
     )
 
-    storage_path = document.storage_path
-    original_filename = document.original_filename
-    patient_visible = document.patient_visible
+    storage_path = (
+        document.storage_path
+    )
+
+    original_filename = (
+        document.original_filename
+    )
+
+    patient_visible = (
+        document.patient_visible
+    )
 
     try:
         write_audit_log(
             db,
-            organization_id=current_user.organization_id,
-            actor_user_id=current_user.id,
+            organization_id=(
+                current_user
+                .organization_id
+            ),
+            actor_user_id=(
+                current_user.id
+            ),
             patient_id=patient.id,
-            action="PATIENT_DOCUMENT_DELETED",
+            action=(
+                "PATIENT_DOCUMENT_DELETED"
+            ),
             resource_type="document",
             resource_id=document.id,
             metadata_json={
-                "original_filename": original_filename,
-                "patient_visible": patient_visible,
+                "original_filename":
+                    original_filename,
+                "patient_visible":
+                    patient_visible,
             },
         )
 
@@ -414,16 +897,23 @@ def delete_patient_document(
         db.rollback()
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to delete document.",
+            status_code=(
+                status
+                .HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "Unable to delete document."
+            ),
         ) from exc
 
     try:
         delete_document(
-            storage_path=storage_path,
+            storage_path=(
+                storage_path
+            ),
         )
+
     except StorageServiceError:
-        # The database record has already been removed.
-        # If storage cleanup fails, the private object is
-        # orphaned but can no longer be accessed through Compass.
+        # DB record is gone and private
+        # storage object is now orphaned.
         pass
