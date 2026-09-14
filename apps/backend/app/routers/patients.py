@@ -179,6 +179,7 @@ def create_patient(
             patient_profile.first_name
         ),
         activation_token=raw_token,
+        activation_type="patient",
     )
 
     return PatientCreateResponse(

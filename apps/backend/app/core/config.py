@@ -1,6 +1,9 @@
 from functools import lru_cache
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    SettingsConfigDict,
+)
 
 
 class Settings(BaseSettings):
@@ -10,7 +13,9 @@ class Settings(BaseSettings):
 
     database_url: str
 
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str = (
+        "http://localhost:3000"
+    )
 
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
@@ -22,8 +27,19 @@ class Settings(BaseSettings):
     bootstrap_admin_password: str
 
     account_invitation_expire_hours: int = 24
-    activation_url: str = "http://localhost:3000/activate"
+
+    activation_url: str = (
+        "http://localhost:3000/activate"
+    )
+
     email_provider: str = "console"
+
+    # Supabase Storage — S3 compatible API
+    supabase_storage_bucket: str = "compass"
+    supabase_s3_endpoint: str
+    supabase_s3_region: str
+    supabase_s3_access_key_id: str
+    supabase_s3_secret_access_key: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

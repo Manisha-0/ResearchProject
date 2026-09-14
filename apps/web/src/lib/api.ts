@@ -14,7 +14,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     status: number,
-    detail?: string
+    detail?: string,
   ) {
     super(message);
 
@@ -33,7 +33,7 @@ type ApiRequestOptions =
 
 export async function apiRequest<T>(
   path: string,
-  options: ApiRequestOptions = {}
+  options: ApiRequestOptions = {},
 ): Promise<T> {
   const {
     token,
@@ -41,25 +41,57 @@ export async function apiRequest<T>(
     ...fetchOptions
   } = options;
 
+  const requestHeaders =
+    new Headers(headers);
+
+  if (token) {
+    requestHeaders.set(
+      "Authorization",
+      `Bearer ${token}`,
+    );
+  }
+
+  const hasBody =
+    fetchOptions.body !==
+      undefined &&
+    fetchOptions.body !== null;
+
+  const isFormData =
+    typeof FormData !==
+      "undefined" &&
+    fetchOptions.body instanceof
+      FormData;
+
+  /*
+   * Do not manually set Content-Type
+   * for FormData.
+   *
+   * The browser must generate:
+   *
+   * multipart/form-data;
+   * boundary=...
+   */
+  if (
+    hasBody &&
+    !isFormData &&
+    !requestHeaders.has(
+      "Content-Type",
+    )
+  ) {
+    requestHeaders.set(
+      "Content-Type",
+      "application/json",
+    );
+  }
+
   const response = await fetch(
     `${API_URL}${path}`,
     {
       ...fetchOptions,
 
-      headers: {
-        "Content-Type":
-          "application/json",
-
-        ...(token
-          ? {
-              Authorization:
-                `Bearer ${token}`,
-            }
-          : {}),
-
-        ...headers,
-      },
-    }
+      headers:
+        requestHeaders,
+    },
   );
 
   if (!response.ok) {
@@ -75,7 +107,25 @@ export async function apiRequest<T>(
         typeof body?.detail ===
         "string"
       ) {
-        detail = body.detail;
+        detail =
+          body.detail;
+      } else if (
+        Array.isArray(
+          body?.detail,
+        )
+      ) {
+        detail =
+          body.detail
+            .map(
+              (
+                item: {
+                  msg?: string;
+                },
+              ) =>
+                item.msg,
+            )
+            .filter(Boolean)
+            .join(", ");
       }
     } catch {
       // Response did not contain
@@ -86,12 +136,13 @@ export async function apiRequest<T>(
       detail ??
         `Request failed with status ${response.status}`,
       response.status,
-      detail
+      detail,
     );
   }
 
   if (
-    response.status === 204
+    response.status ===
+    204
   ) {
     return undefined as T;
   }
@@ -103,7 +154,7 @@ export async function authenticatedApiRequest<
   T
 >(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> {
   const token =
     getAccessToken();
@@ -111,7 +162,7 @@ export async function authenticatedApiRequest<
   if (!token) {
     throw new ApiError(
       "Authentication required.",
-      401
+      401,
     );
   }
 
@@ -120,6 +171,6 @@ export async function authenticatedApiRequest<
     {
       ...options,
       token,
-    }
+    },
   );
 }

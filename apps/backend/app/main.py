@@ -52,7 +52,12 @@ from app.routers.patient_360 import (
 from app.routers.navigator_dashboard import (
     router as navigator_dashboard_router,
 )
-
+from app.routers.documents import (
+    router as documents_router,
+)
+from app.routers.my_documents import (
+    router as my_documents_router,
+)
 app = FastAPI(
     title=settings.app_name,
     debug=settings.debug,
@@ -86,6 +91,12 @@ app.include_router(
 )
 app.include_router(
     navigator_dashboard_router
+)
+app.include_router(
+    documents_router
+)
+app.include_router(
+    my_documents_router,
 )
 
 app.add_middleware(
