@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 import uuid
 
@@ -23,18 +24,21 @@ from app.models.user import User
 from app.schemas.journey import (
     AppointmentCreateRequest,
     AppointmentResponse,
+    AppointmentStatusUpdateRequest,
 )
-from app.services.audit_service import write_audit_log
+from app.services.audit_service import (
+    write_audit_log,
+)
+from app.services.context_engine import (
+    evaluate_and_snapshot_patient,
+)
 from app.services.permissions import (
     get_patient_for_navigator,
 )
-from datetime import datetime, timezone
-
-from app.schemas.journey import (
-    AppointmentCreateRequest,
-    AppointmentResponse,
-    AppointmentStatusUpdateRequest,
+from app.services.signal_service import (
+    generate_signals_from_appointments,
 )
+
 
 router = APIRouter(
     prefix="/patients/{patient_id}/appointments",
@@ -58,7 +62,7 @@ def create_appointment(
         User,
         Depends(
             require_roles(
-                UserRole.NAVIGATOR
+                UserRole.NAVIGATOR,
             )
         ),
     ],
@@ -115,6 +119,21 @@ def create_appointment(
     db.add(appointment)
     db.flush()
 
+    # Generate appointment-derived navigation signals.
+    #
+    # Example:
+    # scheduled appointment within 48 hours
+    # -> upcoming_appointment
+    generate_signals_from_appointments(
+        db,
+        patient_id=patient.id,
+    )
+
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient.id,
+    )
+
     write_audit_log(
         db,
         organization_id=current_user.organization_id,
@@ -122,7 +141,9 @@ def create_appointment(
         patient_id=patient.id,
         action="APPOINTMENT_CREATED",
         resource_type="appointment",
-        resource_id=str(appointment.id),
+        resource_id=str(
+            appointment.id
+        ),
         metadata_json={
             "journey_item_id": str(
                 journey_item.id
@@ -136,18 +157,33 @@ def create_appointment(
     return AppointmentResponse(
         id=appointment.id,
         patient_id=appointment.patient_id,
-        journey_item_id=appointment.journey_item_id,
+        journey_item_id=(
+            appointment.journey_item_id
+        ),
         title=journey_item.title,
-        scheduled_start=appointment.scheduled_start,
-        scheduled_end=appointment.scheduled_end,
+        scheduled_start=(
+            appointment.scheduled_start
+        ),
+        scheduled_end=(
+            appointment.scheduled_end
+        ),
         status=appointment.status,
-        appointment_type=appointment.appointment_type,
-        provider_name=appointment.provider_name,
+        appointment_type=(
+            appointment.appointment_type
+        ),
+        provider_name=(
+            appointment.provider_name
+        ),
         department=appointment.department,
-        location_name=appointment.location_name,
-        address_text=appointment.address_text,
+        location_name=(
+            appointment.location_name
+        ),
+        address_text=(
+            appointment.address_text
+        ),
         notes=appointment.notes,
     )
+
 
 @router.patch(
     "/{appointment_id}/status",
@@ -165,7 +201,7 @@ def update_appointment_status(
         User,
         Depends(
             require_roles(
-                UserRole.NAVIGATOR
+                UserRole.NAVIGATOR,
             )
         ),
     ],
@@ -200,7 +236,9 @@ def update_appointment_status(
 
     if journey_item is None:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
             detail=(
                 "Appointment journey item "
                 "is missing."
@@ -230,7 +268,6 @@ def update_appointment_status(
         payload.status
         == AppointmentStatus.MISSED
     ):
-        # Keep this as a completed historical event.
         journey_item.status = (
             JourneyItemStatus.COMPLETED
         )
@@ -244,6 +281,20 @@ def update_appointment_status(
         )
         journey_item.completed_at = None
 
+    db.flush()
+
+    # Refresh appointment-derived signals after
+    # every appointment status change.
+    generate_signals_from_appointments(
+        db,
+        patient_id=patient.id,
+    )
+
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient.id,
+    )
+
     write_audit_log(
         db,
         organization_id=current_user.organization_id,
@@ -251,9 +302,13 @@ def update_appointment_status(
         patient_id=patient.id,
         action="APPOINTMENT_STATUS_UPDATED",
         resource_type="appointment",
-        resource_id=str(appointment.id),
+        resource_id=str(
+            appointment.id
+        ),
         metadata_json={
-            "status": appointment.status.value,
+            "status": (
+                appointment.status.value
+            ),
         },
     )
 
@@ -263,15 +318,29 @@ def update_appointment_status(
     return AppointmentResponse(
         id=appointment.id,
         patient_id=appointment.patient_id,
-        journey_item_id=appointment.journey_item_id,
+        journey_item_id=(
+            appointment.journey_item_id
+        ),
         title=journey_item.title,
-        scheduled_start=appointment.scheduled_start,
-        scheduled_end=appointment.scheduled_end,
+        scheduled_start=(
+            appointment.scheduled_start
+        ),
+        scheduled_end=(
+            appointment.scheduled_end
+        ),
         status=appointment.status,
-        appointment_type=appointment.appointment_type,
-        provider_name=appointment.provider_name,
+        appointment_type=(
+            appointment.appointment_type
+        ),
+        provider_name=(
+            appointment.provider_name
+        ),
         department=appointment.department,
-        location_name=appointment.location_name,
-        address_text=appointment.address_text,
+        location_name=(
+            appointment.location_name
+        ),
+        address_text=(
+            appointment.address_text
+        ),
         notes=appointment.notes,
     )
