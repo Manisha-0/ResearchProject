@@ -73,6 +73,49 @@ def upload_document(
         ) from exc
 
 
+def download_document(
+    *,
+    storage_path: str,
+) -> bytes:
+    client = get_s3_client()
+
+    try:
+        response = client.get_object(
+            Bucket=(
+                settings
+                .supabase_storage_bucket
+            ),
+            Key=storage_path,
+        )
+
+        body = response["Body"]
+
+        try:
+            content = body.read()
+        finally:
+            body.close()
+
+        if not content:
+            raise StorageServiceError(
+                "Stored document is empty."
+            )
+
+        return content
+
+    except StorageServiceError:
+        raise
+
+    except (
+        ClientError,
+        BotoCoreError,
+        KeyError,
+    ) as exc:
+        raise StorageServiceError(
+            "Unable to download document "
+            "from storage."
+        ) from exc
+
+
 def delete_document(
     *,
     storage_path: str,

@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     supabase_s3_access_key_id: str
     supabase_s3_secret_access_key: str
 
+    # Gemini
+    gemini_api_key: str
+    gemini_model: str = (
+        "gemini-3.6-flash"
+    )
+
+    # Maximum amount of extracted PDF text
+    # sent to Gemini for one summary.
+    document_summary_max_characters: int = (
+        100_000
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
