@@ -228,6 +228,7 @@ def main() -> None:
             CaregiverPermissionType.TRANSPORTATION,
             CaregiverPermissionType.CARE_TASKS,
             CaregiverPermissionType.PROXY_CHECK_IN,
+            CaregiverPermissionType.DOCUMENTS,
         }
 
         for permission in (
@@ -255,6 +256,13 @@ def main() -> None:
         print("")
         print("Caregiver:")
         print("  aarti@compass.demo")
+        print("")
+        print("Caregiver permissions:")
+        print("  appointments")
+        print("  transportation")
+        print("  care_tasks")
+        print("  proxy_check_in")
+        print("  documents")
         print("")
         print(f"Password: {DEMO_PASSWORD}")
 

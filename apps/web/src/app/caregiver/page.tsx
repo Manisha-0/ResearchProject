@@ -10,39 +10,31 @@ import {
   Clock3,
   Eye,
   EyeOff,
+  FileText,
   HeartHandshake,
   LoaderCircle,
   MapPin,
 } from "lucide-react";
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import { useRouter } from "next/navigation";
+
+import { AppHeader } from "@/components/app/AppHeader";
+
+import { ApiError } from "@/lib/api";
 
 import {
-  useRouter,
-} from "next/navigation";
-
-import {
-  AppHeader,
-} from "@/components/app/AppHeader";
-
-import {
-  ApiError,
-} from "@/lib/api";
-
-import {
+  createCaregiverDocumentAccess,
+  getCaregiverDocuments,
   getCaregiverPortal,
   submitCaregiverCheckIn,
 } from "@/lib/caregiver-api";
 
-import {
-  useAuthStore,
-} from "@/store/auth-store";
+import { useAuthStore } from "@/store/auth-store";
 
 import type {
+  CaregiverDocument,
   CaregiverPermission,
   CaregiverPortalPatient,
   CaregiverPortalResponse,
@@ -51,107 +43,72 @@ import type {
 export default function CaregiverPage() {
   const router = useRouter();
 
-  const logout = useAuthStore(
-    (state) => state.logout,
+  const logout = useAuthStore((state) => state.logout);
+
+  const [portal, setPortal] = useState<CaregiverPortalResponse | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  const [confirmingPatientId, setConfirmingPatientId] = useState<string | null>(
+    null,
   );
 
-  const [
-    portal,
-    setPortal,
-  ] =
-    useState<
-      CaregiverPortalResponse | null
-    >(null);
+  const [transportationConfirmed, setTransportationConfirmed] = useState<
+    Record<string, boolean>
+  >({});
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] =
-    useState(true);
+  const handleRequestError = useCallback(
+    (caughtError: unknown) => {
+      if (caughtError instanceof ApiError && caughtError.status === 401) {
+        logout();
 
-  const [
-    error,
-    setError,
-  ] =
-    useState<string | null>(null);
+        router.replace("/login");
 
-  const [
-    confirmingPatientId,
-    setConfirmingPatientId,
-  ] =
-    useState<string | null>(null);
-
-  const [
-    transportationConfirmed,
-    setTransportationConfirmed,
-  ] =
-    useState<Record<string, boolean>>(
-      {},
-    );
-
-  const handleRequestError =
-    useCallback(
-      (caughtError: unknown) => {
-        if (
-          caughtError instanceof
-            ApiError &&
-          caughtError.status === 401
-        ) {
-          logout();
-
-          router.replace(
-            "/login",
-          );
-
-          return true;
-        }
-
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Unable to load caregiver information.",
-        );
-
-        return false;
-      },
-      [logout, router],
-    );
-
-  const loadPortal =
-    useCallback(async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const data =
-          await getCaregiverPortal();
-
-        setPortal(data);
-      } catch (caughtError) {
-        handleRequestError(
-          caughtError,
-        );
-      } finally {
-        setIsLoading(false);
+        return true;
       }
-    }, [handleRequestError]);
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to load caregiver information.",
+      );
+
+      return false;
+    },
+    [logout, router],
+  );
+
+  const loadPortal = useCallback(async () => {
+    setIsLoading(true);
+
+    setError(null);
+
+    try {
+      const data = await getCaregiverPortal();
+
+      setPortal(data);
+    } catch (caughtError) {
+      handleRequestError(caughtError);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [handleRequestError]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchPortal() {
       try {
-        const data =
-          await getCaregiverPortal();
+        const data = await getCaregiverPortal();
 
         if (!cancelled) {
           setPortal(data);
         }
       } catch (caughtError) {
         if (!cancelled) {
-          handleRequestError(
-            caughtError,
-          );
+          handleRequestError(caughtError);
         }
       } finally {
         if (!cancelled) {
@@ -167,66 +124,42 @@ export default function CaregiverPage() {
     };
   }, [handleRequestError]);
 
-  async function confirmTransportation(
-    patient: CaregiverPortalPatient,
-  ) {
+  async function confirmTransportation(patient: CaregiverPortalPatient) {
     if (
-      !hasPermission(
-        patient,
-        "transportation",
-      ) ||
-      !hasPermission(
-        patient,
-        "proxy_check_in",
-      )
+      !hasPermission(patient, "transportation") ||
+      !hasPermission(patient, "proxy_check_in")
     ) {
       return;
     }
 
-    setConfirmingPatientId(
-      patient.patient_id,
-    );
+    setConfirmingPatientId(patient.patient_id);
 
     setError(null);
 
     try {
-      await submitCaregiverCheckIn(
-        patient.patient_id,
-        {
-          symptom_severity: null,
+      await submitCaregiverCheckIn(patient.patient_id, {
+        symptom_severity: null,
 
-          transportation_confirmed:
-            true,
+        transportation_confirmed: true,
 
-          medication_access_issue:
-            false,
+        medication_access_issue: false,
 
-          financial_concern:
-            false,
+        financial_concern: false,
 
-          requested_help:
-            false,
+        requested_help: false,
 
-          free_text:
-            `Caregiver confirmed transportation for ${patient.first_name}.`,
-        },
-      );
+        free_text: `Caregiver confirmed transportation for ${patient.first_name}.`,
+      });
 
-      setTransportationConfirmed(
-        (current) => ({
-          ...current,
-          [patient.patient_id]:
-            true,
-        }),
-      );
+      setTransportationConfirmed((current) => ({
+        ...current,
+
+        [patient.patient_id]: true,
+      }));
     } catch (caughtError) {
-      handleRequestError(
-        caughtError,
-      );
+      handleRequestError(caughtError);
     } finally {
-      setConfirmingPatientId(
-        null,
-      );
+      setConfirmingPatientId(null);
     }
   }
 
@@ -235,125 +168,87 @@ export default function CaregiverPage() {
       <AppHeader />
 
       <div className="mx-auto max-w-3xl px-5 py-8 sm:py-10">
-        {isLoading && (
-          <LoadingState />
+        {isLoading && <LoadingState />}
+
+        {!isLoading && error && !portal && (
+          <ErrorState message={error} onRetry={() => void loadPortal()} />
         )}
 
-        {!isLoading &&
-          error &&
-          !portal && (
-            <ErrorState
-              message={error}
-              onRetry={() =>
-                void loadPortal()
-              }
-            />
-          )}
-
-        {!isLoading &&
-          portal && (
-            <>
-              <section>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-tint">
-                    <HeartHandshake className="h-5 w-5 text-navy" />
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-ink-soft">
-                      Caregiver view
-                    </p>
-
-                    <h1 className="font-display text-3xl font-bold text-navy-deep">
-                      Welcome,{" "}
-                      {
-                        portal.caregiver_first_name
-                      }
-                    </h1>
-                  </div>
+        {!isLoading && portal && (
+          <>
+            <section>
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-tint">
+                  <HeartHandshake className="h-5 w-5 text-navy" />
                 </div>
 
-                <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft">
-                  Here&apos;s what you
-                  currently have permission
-                  to help coordinate.
-                </p>
-              </section>
+                <div>
+                  <p className="text-sm text-ink-soft">Caregiver view</p>
 
-              {error && (
-                <div className="mt-6 rounded-xl bg-priority-high-tint p-4 text-sm text-priority-high">
-                  {error}
+                  <h1 className="font-display text-3xl font-bold text-navy-deep">
+                    Welcome, {portal.caregiver_first_name}
+                  </h1>
                 </div>
-              )}
+              </div>
 
-              {portal.patients.length ===
-              0 ? (
-                <EmptyState />
-              ) : (
-                <div className="mt-8 space-y-8">
-                  {portal.patients.map(
-                    (patient) => (
-                      <PatientAccessCard
-                        key={
-                          patient.patient_id
-                        }
-                        patient={
-                          patient
-                        }
-                        transportationConfirmed={
-                          transportationConfirmed[
-                            patient
-                              .patient_id
-                          ] ??
-                          false
-                        }
-                        isConfirming={
-                          confirmingPatientId ===
-                          patient.patient_id
-                        }
-                        onConfirmTransportation={() =>
-                          void confirmTransportation(
-                            patient,
-                          )
-                        }
-                      />
-                    ),
-                  )}
-                </div>
-              )}
-
-              <section className="mt-6 rounded-2xl bg-navy p-5 text-white sm:p-6">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-                  Need help?
-                </p>
-
-                <div className="mt-3 flex items-center justify-between gap-4">
-                  <div>
-                    <h2 className="font-semibold">
-                      Contact the navigation
-                      team
-                    </h2>
-
-                    <p className="mt-1 text-sm leading-6 text-white/65">
-                      Ask a question about
-                      appointments,
-                      transportation, or care
-                      coordination.
-                    </p>
-                  </div>
-
-                  <ChevronRight className="h-5 w-5 shrink-0 text-gold" />
-                </div>
-              </section>
-
-              <p className="mt-7 text-center text-xs leading-5 text-ink-soft">
-                Compass uses synthetic demo
-                data. Caregiver access is
-                controlled by patient-granted
-                permissions.
+              <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft">
+                Here&apos;s what you currently have permission to help
+                coordinate.
               </p>
-            </>
-          )}
+            </section>
+
+            {error && (
+              <div className="mt-6 rounded-xl bg-priority-high-tint p-4 text-sm text-priority-high">
+                {error}
+              </div>
+            )}
+
+            {portal.patients.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="mt-8 space-y-8">
+                {portal.patients.map((patient) => (
+                  <PatientAccessCard
+                    key={patient.patient_id}
+                    patient={patient}
+                    transportationConfirmed={
+                      transportationConfirmed[patient.patient_id] ?? false
+                    }
+                    isConfirming={confirmingPatientId === patient.patient_id}
+                    onConfirmTransportation={() =>
+                      void confirmTransportation(patient)
+                    }
+                    onUnauthorized={handleRequestError}
+                  />
+                ))}
+              </div>
+            )}
+
+            <section className="mt-6 rounded-2xl bg-navy p-5 text-white sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+                Need help?
+              </p>
+
+              <div className="mt-3 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold">Contact the navigation team</h2>
+
+                  <p className="mt-1 text-sm leading-6 text-white/65">
+                    Ask a question about appointments, transportation, or care
+                    coordination.
+                  </p>
+                </div>
+
+                <ChevronRight className="h-5 w-5 shrink-0 text-gold" />
+              </div>
+            </section>
+
+            <p className="mt-7 text-center text-xs leading-5 text-ink-soft">
+              Compass uses synthetic demo data. Caregiver access is controlled
+              by patient-granted permissions.
+            </p>
+          </>
+        )}
       </div>
     </main>
   );
@@ -364,6 +259,7 @@ function PatientAccessCard({
   transportationConfirmed,
   isConfirming,
   onConfirmTransportation,
+  onUnauthorized,
 }: {
   patient: CaregiverPortalPatient;
 
@@ -371,41 +267,27 @@ function PatientAccessCard({
 
   isConfirming: boolean;
 
-  onConfirmTransportation:
-    () => void;
+  onConfirmTransportation: () => void;
+
+  onUnauthorized: (error: unknown) => boolean;
 }) {
-  const canViewAppointments =
-    hasPermission(
-      patient,
-      "appointments",
-    );
+  const canViewAppointments = hasPermission(patient, "appointments");
 
-  const canHelpTransportation =
-    hasPermission(
-      patient,
-      "transportation",
-    );
+  const canHelpTransportation = hasPermission(patient, "transportation");
 
-  const canProxyCheckIn =
-    hasPermission(
-      patient,
-      "proxy_check_in",
-    );
+  const canProxyCheckIn = hasPermission(patient, "proxy_check_in");
 
-  const canConfirmTransportation =
-    canHelpTransportation &&
-    canProxyCheckIn;
+  const canViewDocuments = hasPermission(patient, "documents");
+
+  const canConfirmTransportation = canHelpTransportation && canProxyCheckIn;
 
   return (
     <>
       <section>
-        <p className="text-sm text-ink-soft">
-          Helping
-        </p>
+        <p className="text-sm text-ink-soft">Helping</p>
 
         <h2 className="mt-1 font-display text-2xl font-bold text-navy-deep">
-          {patient.first_name}{" "}
-          {patient.last_name}
+          {patient.first_name} {patient.last_name}
         </h2>
 
         <p className="mt-1 text-sm capitalize text-ink-soft">
@@ -425,19 +307,12 @@ function PatientAccessCard({
                 <div className="mt-2 flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-xl font-semibold text-navy-deep">
-                      {
-                        patient
-                          .next_appointment
-                          .title
-                      }
+                      {patient.next_appointment.title}
                     </h3>
 
                     <p className="mt-1 text-sm text-ink-soft">
-                      {
-                        patient.first_name
-                      }
-                      &apos;s next
-                      appointment
+                      {patient.first_name}
+                      &apos;s next appointment
                     </p>
                   </div>
 
@@ -448,32 +323,21 @@ function PatientAccessCard({
                   <DetailRow
                     icon={<Clock3 />}
                     text={formatDateTime(
-                      patient
-                        .next_appointment
-                        .scheduled_start,
+                      patient.next_appointment.scheduled_start,
                     )}
                   />
 
-                  {getAppointmentLocation(
-                    patient,
-                  ) && (
+                  {getAppointmentLocation(patient) && (
                     <DetailRow
-                      icon={
-                        <MapPin />
-                      }
-                      text={
-                        getAppointmentLocation(
-                          patient,
-                        )!
-                      }
+                      icon={<MapPin />}
+                      text={getAppointmentLocation(patient)!}
                     />
                   )}
                 </div>
               </>
             ) : (
               <p className="mt-3 text-sm text-ink-soft">
-                No upcoming appointment
-                is currently available.
+                No upcoming appointment is currently available.
               </p>
             )}
           </div>
@@ -484,6 +348,7 @@ function PatientAccessCard({
                 <div
                   className={[
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+
                     transportationConfirmed
                       ? "bg-priority-low-tint"
                       : "bg-gold-tint",
@@ -492,6 +357,7 @@ function PatientAccessCard({
                   <Car
                     className={[
                       "h-5 w-5",
+
                       transportationConfirmed
                         ? "text-priority-low"
                         : "text-navy",
@@ -500,44 +366,31 @@ function PatientAccessCard({
                 </div>
 
                 <div className="flex-1">
-                  <p className="font-semibold text-ink">
-                    Transportation
-                  </p>
+                  <p className="font-semibold text-ink">Transportation</p>
 
                   {transportationConfirmed ? (
                     <>
                       <div className="mt-2 flex items-center gap-2 text-sm font-medium text-priority-low">
                         <CheckCircle2 className="h-4 w-4" />
-                        Transportation
-                        confirmed
+                        Transportation confirmed
                       </div>
 
                       <p className="mt-2 text-sm leading-6 text-ink-soft">
-                        Your update has
-                        been shared with
-                        the navigation
-                        team.
+                        Your update has been shared with the navigation team.
                       </p>
                     </>
                   ) : (
                     <>
                       <p className="mt-2 text-sm leading-6 text-ink-soft">
-                        If you can provide
-                        transportation,
-                        you can share that
-                        update with the
-                        navigation team.
+                        If you can provide transportation, you can share that
+                        update with the navigation team.
                       </p>
 
                       {canConfirmTransportation ? (
                         <button
                           type="button"
-                          disabled={
-                            isConfirming
-                          }
-                          onClick={
-                            onConfirmTransportation
-                          }
+                          disabled={isConfirming}
+                          onClick={onConfirmTransportation}
                           className="mt-4 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isConfirming ? (
@@ -552,10 +405,8 @@ function PatientAccessCard({
                         </button>
                       ) : (
                         <p className="mt-3 text-xs leading-5 text-ink-soft">
-                          Proxy check-in
-                          permission is
-                          required to submit
-                          this update.
+                          Proxy check-in permission is required to submit this
+                          update.
                         </p>
                       )}
                     </>
@@ -567,18 +418,255 @@ function PatientAccessCard({
         </section>
       )}
 
-      <PermissionPanel
-        patient={patient}
-      />
+      {canViewDocuments && (
+        <CaregiverDocuments patient={patient} onUnauthorized={onUnauthorized} />
+      )}
+
+      <PermissionPanel patient={patient} />
     </>
   );
 }
 
-function PermissionPanel({
+function CaregiverDocuments({
   patient,
+  onUnauthorized,
 }: {
   patient: CaregiverPortalPatient;
+
+  onUnauthorized: (error: unknown) => boolean;
 }) {
+  const [documents, setDocuments] = useState<CaregiverDocument[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
+  const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(
+    null,
+  );
+
+  const loadDocuments = useCallback(async () => {
+    setIsLoading(true);
+
+    setError(null);
+
+    try {
+      const data = await getCaregiverDocuments(patient.patient_id);
+
+      setDocuments(data);
+    } catch (caughtError) {
+      if (onUnauthorized(caughtError)) {
+        return;
+      }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to load shared documents.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [onUnauthorized, patient.patient_id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDocuments() {
+      try {
+        const data = await getCaregiverDocuments(patient.patient_id);
+
+        if (!cancelled) {
+          setDocuments(data);
+        }
+      } catch (caughtError) {
+        if (cancelled) {
+          return;
+        }
+
+        if (onUnauthorized(caughtError)) {
+          return;
+        }
+
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to load shared documents.",
+        );
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void fetchDocuments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [onUnauthorized, patient.patient_id]);
+
+  async function handleOpenDocument(document: CaregiverDocument) {
+    setOpeningDocumentId(document.id);
+
+    setError(null);
+
+    try {
+      const access = await createCaregiverDocumentAccess(
+        patient.patient_id,
+        document.id,
+      );
+
+      window.open(access.url, "_blank", "noopener,noreferrer");
+    } catch (caughtError) {
+      if (onUnauthorized(caughtError)) {
+        return;
+      }
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to open the document.",
+      );
+    } finally {
+      setOpeningDocumentId(null);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-2xl border border-border bg-white p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-tint">
+          <FileText className="h-5 w-5 text-navy" />
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            Shared Documents
+          </p>
+
+          <h2 className="mt-1 text-lg font-semibold text-ink">
+            Documents shared by {patient.first_name}
+          </h2>
+
+          <p className="mt-1 text-sm leading-6 text-ink-soft">
+            You can view documents that have been shared with the patient and
+            included in your caregiver permissions.
+          </p>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="mt-5 flex items-center gap-2 rounded-xl bg-surface-soft p-4 text-sm text-ink-soft">
+          <LoaderCircle className="h-4 w-4 animate-spin text-navy" />
+          Loading shared documents...
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="mt-5 rounded-xl bg-priority-high-tint p-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-priority-high" />
+
+            <div>
+              <p className="text-sm text-priority-high">{error}</p>
+
+              <button
+                type="button"
+                onClick={() => void loadDocuments()}
+                className="mt-2 text-xs font-semibold text-priority-high underline underline-offset-2"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && documents.length === 0 && (
+        <div className="mt-5 rounded-xl bg-surface-soft p-4">
+          <p className="text-sm text-ink-soft">
+            No documents have been shared with you yet.
+          </p>
+        </div>
+      )}
+
+      {!isLoading && !error && documents.length > 0 && (
+        <div className="mt-5 space-y-3">
+          {documents.map((document) => {
+            const isOpening = openingDocumentId === document.id;
+
+            return (
+              <div
+                key={document.id}
+                className="rounded-xl border border-border bg-surface-soft p-4"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
+                        <FileText className="h-4 w-4 text-navy" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="wrap-break-word text-sm font-semibold text-ink">
+                          {document.original_filename}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-navy">
+                            {formatDocumentType(document.document_type)}
+                          </span>
+
+                          <span className="rounded-full bg-priority-low-tint px-2.5 py-1 text-[11px] font-semibold text-priority-low">
+                            Shared
+                          </span>
+                        </div>
+
+                        <p className="mt-2 text-xs text-ink-soft">
+                          {formatFileSize(document.file_size_bytes)}
+                          {" · "}
+                          {formatDate(document.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isOpening}
+                    onClick={() => void handleOpenDocument(document)}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isOpening ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+
+                    {isOpening ? "Opening..." : "View PDF"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-4 flex items-start gap-2 rounded-lg bg-navy-tint p-3">
+        <Eye className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+
+        <p className="text-xs leading-5 text-ink-soft">
+          Caregiver document access is read-only. Uploading, deleting, and
+          navigator-only documents are not available here.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function PermissionPanel({ patient }: { patient: CaregiverPortalPatient }) {
   return (
     <section className="mt-6 rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div>
@@ -587,65 +675,43 @@ function PermissionPanel({
         </p>
 
         <h2 className="mt-1 text-lg font-semibold text-ink">
-          What{" "}
-          {patient.first_name} has
-          shared with you
+          What {patient.first_name} has shared with you
         </h2>
 
         <p className="mt-2 text-sm leading-6 text-ink-soft">
-          Caregiver access is scoped by
-          category, not all-or-nothing.
+          Caregiver access is scoped by category, not all-or-nothing.
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
         <Permission
-          allowed={hasPermission(
-            patient,
-            "appointments",
-          )}
+          allowed={hasPermission(patient, "appointments")}
           label="Appointments"
         />
 
         <Permission
-          allowed={hasPermission(
-            patient,
-            "transportation",
-          )}
+          allowed={hasPermission(patient, "transportation")}
           label="Transportation"
         />
 
         <Permission
-          allowed={hasPermission(
-            patient,
-            "care_tasks",
-          )}
+          allowed={hasPermission(patient, "care_tasks")}
           label="Care tasks"
         />
 
         <Permission
-          allowed={hasPermission(
-            patient,
-            "proxy_check_in",
-          )}
+          allowed={hasPermission(patient, "proxy_check_in")}
           label="Proxy check-ins"
         />
 
         <Permission
-          allowed={hasPermission(
-            patient,
-            "documents",
-          )}
+          allowed={hasPermission(patient, "documents")}
           label="Documents"
         />
 
-        <Permission
-          label="Clinical notes"
-        />
+        <Permission label="Clinical notes" />
 
-        <Permission
-          label="Navigator notes"
-        />
+        <Permission label="Navigator notes" />
       </div>
     </section>
   );
@@ -656,13 +722,12 @@ function DetailRow({
   text,
 }: {
   icon: React.ReactNode;
+
   text: string;
 }) {
   return (
     <div className="flex items-center gap-3 text-sm text-ink-soft">
-      <span className="[&>svg]:h-4 [&>svg]:w-4 [&>svg]:text-navy">
-        {icon}
-      </span>
+      <span className="[&>svg]:h-4 [&>svg]:w-4 [&>svg]:text-navy">{icon}</span>
 
       <span>{text}</span>
     </div>
@@ -674,6 +739,7 @@ function Permission({
   allowed = false,
 }: {
   label: string;
+
   allowed?: boolean;
 }) {
   return (
@@ -685,9 +751,7 @@ function Permission({
           <EyeOff className="h-4 w-4 text-ink-soft" />
         )}
 
-        <span className="text-sm font-medium text-ink">
-          {label}
-        </span>
+        <span className="text-sm font-medium text-ink">{label}</span>
       </div>
 
       {allowed ? (
@@ -696,9 +760,7 @@ function Permission({
           Shared
         </span>
       ) : (
-        <span className="text-xs font-medium text-ink-soft">
-          Not shared
-        </span>
+        <span className="text-xs font-medium text-ink-soft">Not shared</span>
       )}
     </div>
   );
@@ -723,6 +785,7 @@ function ErrorState({
   onRetry,
 }: {
   message: string;
+
   onRetry: () => void;
 }) {
   return (
@@ -732,13 +795,10 @@ function ErrorState({
 
         <div>
           <p className="font-semibold text-ink">
-            Unable to load caregiver
-            access
+            Unable to load caregiver access
           </p>
 
-          <p className="mt-1 text-sm text-ink-soft">
-            {message}
-          </p>
+          <p className="mt-1 text-sm text-ink-soft">{message}</p>
 
           <button
             type="button"
@@ -760,13 +820,10 @@ function EmptyState() {
         <HeartHandshake className="mt-0.5 h-5 w-5 text-navy" />
 
         <div>
-          <p className="font-semibold text-ink">
-            No active patient access
-          </p>
+          <p className="font-semibold text-ink">No active patient access</p>
 
           <p className="mt-2 text-sm leading-6 text-ink-soft">
-            You do not currently have an
-            active caregiver relationship.
+            You do not currently have an active caregiver relationship.
           </p>
         </div>
       </div>
@@ -776,42 +833,62 @@ function EmptyState() {
 
 function hasPermission(
   patient: CaregiverPortalPatient,
+
   permission: CaregiverPermission,
 ) {
-  return patient.permissions.includes(
-    permission,
-  );
+  return patient.permissions.includes(permission);
 }
 
-function getAppointmentLocation(
-  patient: CaregiverPortalPatient,
-) {
-  const appointment =
-    patient.next_appointment;
+function getAppointmentLocation(patient: CaregiverPortalPatient) {
+  const appointment = patient.next_appointment;
 
   if (!appointment) {
     return null;
   }
 
-  return [
-    appointment.location_name,
-    appointment.address_text,
-  ]
+  return [appointment.location_name, appointment.address_text]
     .filter(Boolean)
     .join(" · ");
 }
 
-function formatDateTime(
-  value: string,
-) {
-  return new Intl.DateTimeFormat(
-    "en-US",
-    {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    },
-  ).format(new Date(value));
+function formatDocumentType(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+
+    day: "numeric",
+
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+
+    day: "numeric",
+
+    year: "numeric",
+
+    hour: "numeric",
+
+    minute: "2-digit",
+  }).format(new Date(value));
 }
