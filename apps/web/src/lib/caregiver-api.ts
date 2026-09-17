@@ -70,3 +70,19 @@ export async function createCaregiverDocumentAccess(
     },
   );
 }
+
+export type CaregiverTransportationConfirmationResponse = {
+  confirmed: boolean;
+  confirmed_at: string | null;
+};
+
+export async function confirmCaregiverTransportation(
+  patientId: string,
+): Promise<CaregiverTransportationConfirmationResponse> {
+  return authenticatedApiRequest<CaregiverTransportationConfirmationResponse>(
+    `/caregiver/patients/${patientId}/transportation/confirm`,
+    {
+      method: "POST",
+    },
+  );
+}

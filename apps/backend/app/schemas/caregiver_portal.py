@@ -9,7 +9,9 @@ from app.models.enums import (
 )
 
 
-class CaregiverPortalAppointmentResponse(BaseModel):
+class CaregiverPortalAppointmentResponse(
+    BaseModel
+):
     appointment_id: uuid.UUID
     title: str
 
@@ -25,7 +27,20 @@ class CaregiverPortalAppointmentResponse(BaseModel):
     address_text: str | None
 
 
-class CaregiverPortalPatientResponse(BaseModel):
+class CaregiverTransportationResponse(
+    BaseModel
+):
+    confirmed: bool
+    confirmed_at: datetime | None = None
+
+    confirmed_by_current_caregiver: (
+        bool
+    ) = False
+
+
+class CaregiverPortalPatientResponse(
+    BaseModel
+):
     patient_id: uuid.UUID
 
     first_name: str
@@ -40,6 +55,10 @@ class CaregiverPortalPatientResponse(BaseModel):
     next_appointment: (
         CaregiverPortalAppointmentResponse
         | None
+    )
+
+    transportation: (
+        CaregiverTransportationResponse
     )
 
 
