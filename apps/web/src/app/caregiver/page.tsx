@@ -22,13 +22,15 @@ import { useRouter } from "next/navigation";
 
 import { AppHeader } from "@/components/app/AppHeader";
 
+import { CaregiverCheckInForm } from "@/components/caregiver/CaregiverCheckInForm";
+
 import { ApiError } from "@/lib/api";
 
 import {
+  confirmCaregiverTransportation,
   createCaregiverDocumentAccess,
   getCaregiverDocuments,
   getCaregiverPortal,
-  submitCaregiverCheckIn,
 } from "@/lib/caregiver-api";
 
 import { useAuthStore } from "@/store/auth-store";
@@ -55,10 +57,6 @@ export default function CaregiverPage() {
     null,
   );
 
-  const [transportationConfirmed, setTransportationConfirmed] = useState<
-    Record<string, boolean>
-  >({});
-
   const handleRequestError = useCallback(
     (caughtError: unknown) => {
       if (caughtError instanceof ApiError && caughtError.status === 401) {
@@ -72,7 +70,7 @@ export default function CaregiverPage() {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to load caregiver information.",
+          : "Unable to load " + "caregiver " + "information.",
       );
 
       return false;
@@ -125,10 +123,7 @@ export default function CaregiverPage() {
   }, [handleRequestError]);
 
   async function confirmTransportation(patient: CaregiverPortalPatient) {
-    if (
-      !hasPermission(patient, "transportation") ||
-      !hasPermission(patient, "proxy_check_in")
-    ) {
+    if (!hasPermission(patient, "transportation")) {
       return;
     }
 
@@ -137,25 +132,11 @@ export default function CaregiverPage() {
     setError(null);
 
     try {
-      await submitCaregiverCheckIn(patient.patient_id, {
-        symptom_severity: null,
+      await confirmCaregiverTransportation(patient.patient_id);
 
-        transportation_confirmed: true,
+      const data = await getCaregiverPortal();
 
-        medication_access_issue: false,
-
-        financial_concern: false,
-
-        requested_help: false,
-
-        free_text: `Caregiver confirmed transportation for ${patient.first_name}.`,
-      });
-
-      setTransportationConfirmed((current) => ({
-        ...current,
-
-        [patient.patient_id]: true,
-      }));
+      setPortal(data);
     } catch (caughtError) {
       handleRequestError(caughtError);
     } finally {
@@ -211,9 +192,6 @@ export default function CaregiverPage() {
                   <PatientAccessCard
                     key={patient.patient_id}
                     patient={patient}
-                    transportationConfirmed={
-                      transportationConfirmed[patient.patient_id] ?? false
-                    }
                     isConfirming={confirmingPatientId === patient.patient_id}
                     onConfirmTransportation={() =>
                       void confirmTransportation(patient)
@@ -256,14 +234,11 @@ export default function CaregiverPage() {
 
 function PatientAccessCard({
   patient,
-  transportationConfirmed,
   isConfirming,
   onConfirmTransportation,
   onUnauthorized,
 }: {
   patient: CaregiverPortalPatient;
-
-  transportationConfirmed: boolean;
 
   isConfirming: boolean;
 
@@ -279,7 +254,7 @@ function PatientAccessCard({
 
   const canViewDocuments = hasPermission(patient, "documents");
 
-  const canConfirmTransportation = canHelpTransportation && canProxyCheckIn;
+  const transportationConfirmed = patient.transportation.confirmed;
 
   return (
     <>
@@ -347,8 +322,11 @@ function PatientAccessCard({
               <div className="flex items-start gap-4">
                 <div
                   className={[
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-
+                    "flex h-10 " +
+                      "w-10 shrink-0 " +
+                      "items-center " +
+                      "justify-center " +
+                      "rounded-xl",
                     transportationConfirmed
                       ? "bg-priority-low-tint"
                       : "bg-gold-tint",
@@ -357,7 +335,6 @@ function PatientAccessCard({
                   <Car
                     className={[
                       "h-5 w-5",
-
                       transportationConfirmed
                         ? "text-priority-low"
                         : "text-navy",
@@ -375,40 +352,45 @@ function PatientAccessCard({
                         Transportation confirmed
                       </div>
 
-                      <p className="mt-2 text-sm leading-6 text-ink-soft">
-                        Your update has been shared with the navigation team.
+                      {patient.transportation.confirmed_at && (
+                        <p className="mt-2 text-sm leading-6 text-ink-soft">
+                          Confirmed{" "}
+                          {formatDateTime(patient.transportation.confirmed_at)}.
+                        </p>
+                      )}
+
+                      <p className="mt-1 text-sm leading-6 text-ink-soft">
+                        This update has been shared with the navigation team.
                       </p>
                     </>
+                  ) : !patient.next_appointment ? (
+                    <p className="mt-2 text-sm leading-6 text-ink-soft">
+                      No transportation confirmation is needed right now because
+                      there is no upcoming appointment.
+                    </p>
                   ) : (
                     <>
                       <p className="mt-2 text-sm leading-6 text-ink-soft">
-                        If you can provide transportation, you can share that
-                        update with the navigation team.
+                        Transportation has not been confirmed for the upcoming
+                        appointment.
                       </p>
 
-                      {canConfirmTransportation ? (
-                        <button
-                          type="button"
-                          disabled={isConfirming}
-                          onClick={onConfirmTransportation}
-                          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {isConfirming ? (
-                            <LoaderCircle className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Car className="h-4 w-4" />
-                          )}
+                      <button
+                        type="button"
+                        disabled={isConfirming}
+                        onClick={onConfirmTransportation}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isConfirming ? (
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Car className="h-4 w-4" />
+                        )}
 
-                          {isConfirming
-                            ? "Sharing update..."
-                            : `I can drive ${patient.first_name}`}
-                        </button>
-                      ) : (
-                        <p className="mt-3 text-xs leading-5 text-ink-soft">
-                          Proxy check-in permission is required to submit this
-                          update.
-                        </p>
-                      )}
+                        {isConfirming
+                          ? "Sharing " + "update..."
+                          : `I can drive ${patient.first_name}`}
+                      </button>
                     </>
                   )}
                 </div>
@@ -416,6 +398,14 @@ function PatientAccessCard({
             </div>
           )}
         </section>
+      )}
+
+      {canProxyCheckIn && (
+        <CaregiverCheckInForm
+          patientId={patient.patient_id}
+          patientFirstName={patient.first_name}
+          relationship={patient.relationship}
+        />
       )}
 
       {canViewDocuments && (
@@ -462,7 +452,7 @@ function CaregiverDocuments({
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to load shared documents.",
+          : "Unable to load " + "shared " + "documents.",
       );
     } finally {
       setIsLoading(false);
@@ -491,7 +481,7 @@ function CaregiverDocuments({
         setError(
           caughtError instanceof Error
             ? caughtError.message
-            : "Unable to load shared documents.",
+            : "Unable to load " + "shared " + "documents.",
         );
       } finally {
         if (!cancelled) {
@@ -527,7 +517,7 @@ function CaregiverDocuments({
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to open the document.",
+          : "Unable to open " + "the document.",
       );
     } finally {
       setOpeningDocumentId(null);
@@ -872,9 +862,7 @@ function formatFileSize(bytes: number) {
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
-
     day: "numeric",
-
     year: "numeric",
   }).format(new Date(value));
 }
@@ -882,13 +870,9 @@ function formatDate(value: string) {
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
-
     day: "numeric",
-
     year: "numeric",
-
     hour: "numeric",
-
     minute: "2-digit",
   }).format(new Date(value));
 }

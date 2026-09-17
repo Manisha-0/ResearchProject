@@ -20,11 +20,13 @@ from app.models.caregiver import (
     CaregiverPermission,
     CaregiverProfile,
 )
+from app.models.check_in import CheckIn
 from app.models.document import Document
 from app.models.enums import (
     AppointmentStatus,
     CaregiverAccessStatus,
     CaregiverPermissionType,
+    CheckInSource,
     UserRole,
 )
 from app.models.journey import CareJourneyItem
@@ -35,6 +37,7 @@ from app.schemas.caregiver_portal import (
     CaregiverPortalAppointmentResponse,
     CaregiverPortalPatientResponse,
     CaregiverPortalResponse,
+    CaregiverTransportationResponse,
 )
 from app.schemas.document import (
     DocumentAccessResponse,
@@ -43,6 +46,12 @@ from app.schemas.document import (
 
 from app.services.audit_service import (
     write_audit_log,
+)
+from app.services.context_engine import (
+    evaluate_and_snapshot_patient,
+)
+from app.services.signal_service import (
+    generate_signals_from_check_in,
 )
 from app.services.storage_service import (
     StorageServiceError,
@@ -66,7 +75,9 @@ def build_document_response(
         original_filename=document.original_filename,
         content_type=document.content_type,
         file_size_bytes=document.file_size_bytes,
-        uploaded_by_user_id=document.uploaded_by_user_id,
+        uploaded_by_user_id=(
+            document.uploaded_by_user_id
+        ),
         patient_visible=document.patient_visible,
         created_at=document.created_at,
     )
@@ -82,16 +93,17 @@ def get_caregiver_patient_access(
     PatientProfile,
 ]:
     """
-    Resolve an ACTIVE caregiver-to-patient relationship
-    and verify that the patient belongs to the caregiver's
-    organization.
+    Resolve an ACTIVE caregiver-to-patient
+    relationship and verify that the patient
+    belongs to the caregiver's organization.
     """
 
     access = db.scalar(
         select(
             CaregiverPatientAccess
         ).where(
-            CaregiverPatientAccess.caregiver_user_id
+            CaregiverPatientAccess
+            .caregiver_user_id
             == current_user.id,
             CaregiverPatientAccess.patient_id
             == patient_id,
@@ -145,7 +157,8 @@ def get_caregiver_permissions(
             select(
                 CaregiverPermission.permission
             ).where(
-                CaregiverPermission.caregiver_access_id
+                CaregiverPermission
+                .caregiver_access_id
                 == caregiver_access_id
             )
         ).all()
@@ -162,7 +175,8 @@ def require_caregiver_permission(
         select(
             CaregiverPermission.id
         ).where(
-            CaregiverPermission.caregiver_access_id
+            CaregiverPermission
+            .caregiver_access_id
             == caregiver_access_id,
             CaregiverPermission.permission
             == permission,
@@ -231,6 +245,76 @@ def get_document_for_caregiver(
     )
 
 
+def get_latest_transportation_check_in(
+    db: Session,
+    *,
+    patient_id: uuid.UUID,
+) -> CheckIn | None:
+    """
+    Return the patient's latest check-in that
+    explicitly contains transportation state.
+
+    A value of None for transportation_confirmed
+    means that the check-in did not report a
+    transportation state, so those rows are ignored.
+    """
+
+    return db.scalar(
+        select(CheckIn)
+        .where(
+            CheckIn.patient_id == patient_id,
+            CheckIn.transportation_confirmed
+            .is_not(None),
+        )
+        .order_by(
+            CheckIn.created_at.desc(),
+            CheckIn.id.desc(),
+        )
+        .limit(1)
+    )
+
+
+def build_transportation_response(
+    db: Session,
+    *,
+    patient_id: uuid.UUID,
+    current_user: User,
+) -> CaregiverTransportationResponse:
+    latest = (
+        get_latest_transportation_check_in(
+            db,
+            patient_id=patient_id,
+        )
+    )
+
+    confirmed = (
+        latest is not None
+        and latest.transportation_confirmed
+        is True
+    )
+
+    confirmed_by_current_caregiver = (
+        confirmed
+        and latest is not None
+        and latest.source
+        == CheckInSource.CAREGIVER
+        and latest.submitted_by_user_id
+        == current_user.id
+    )
+
+    return CaregiverTransportationResponse(
+        confirmed=confirmed,
+        confirmed_at=(
+            latest.created_at
+            if confirmed and latest is not None
+            else None
+        ),
+        confirmed_by_current_caregiver=(
+            confirmed_by_current_caregiver
+        ),
+    )
+
+
 @router.get(
     "/portal",
     response_model=CaregiverPortalResponse,
@@ -270,7 +354,8 @@ def get_caregiver_portal(
             CaregiverPatientAccess
         )
         .where(
-            CaregiverPatientAccess.caregiver_user_id
+            CaregiverPatientAccess
+            .caregiver_user_id
             == current_user.id,
             CaregiverPatientAccess.status
             == CaregiverAccessStatus.ACTIVE,
@@ -280,7 +365,9 @@ def get_caregiver_portal(
         )
     ).all()
 
-    patients = []
+    patients: list[
+        CaregiverPortalPatientResponse
+    ] = []
 
     for access in accesses:
         patient = db.get(
@@ -339,7 +426,8 @@ def get_caregiver_portal(
                     .is_(True),
                 )
                 .order_by(
-                    Appointment.scheduled_start.asc()
+                    Appointment
+                    .scheduled_start.asc()
                 )
                 .limit(1)
             ).first()
@@ -349,32 +437,52 @@ def get_caregiver_portal(
 
                 next_appointment = (
                     CaregiverPortalAppointmentResponse(
-                        appointment_id=appointment.id,
-                        title=journey_item.title,
+                        appointment_id=(
+                            appointment.id
+                        ),
+                        title=(
+                            journey_item.title
+                        ),
                         scheduled_start=(
-                            appointment.scheduled_start
+                            appointment
+                            .scheduled_start
                         ),
                         scheduled_end=(
-                            appointment.scheduled_end
+                            appointment
+                            .scheduled_end
                         ),
-                        status=appointment.status,
+                        status=(
+                            appointment.status
+                        ),
                         appointment_type=(
-                            appointment.appointment_type
+                            appointment
+                            .appointment_type
                         ),
                         provider_name=(
-                            appointment.provider_name
+                            appointment
+                            .provider_name
                         ),
                         department=(
                             appointment.department
                         ),
                         location_name=(
-                            appointment.location_name
+                            appointment
+                            .location_name
                         ),
                         address_text=(
-                            appointment.address_text
+                            appointment
+                            .address_text
                         ),
                     )
                 )
+
+        transportation = (
+            build_transportation_response(
+                db,
+                patient_id=patient.id,
+                current_user=current_user,
+            )
+        )
 
         patients.append(
             CaregiverPortalPatientResponse(
@@ -385,6 +493,9 @@ def get_caregiver_portal(
                 permissions=permissions,
                 next_appointment=(
                     next_appointment
+                ),
+                transportation=(
+                    transportation
                 ),
             )
         )
@@ -398,6 +509,156 @@ def get_caregiver_portal(
         ),
         patients=patients,
     )
+
+
+@router.post(
+    (
+        "/patients/{patient_id}/"
+        "transportation/confirm"
+    ),
+    status_code=status.HTTP_200_OK,
+)
+def confirm_caregiver_transportation(
+    patient_id: uuid.UUID,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.CAREGIVER
+            )
+        ),
+    ],
+):
+    """
+    Confirm that the caregiver can provide
+    transportation for the patient.
+
+    This action requires TRANSPORTATION permission,
+    not PROXY_CHECK_IN permission.
+
+    The operation is idempotent while transportation
+    remains confirmed. Repeated identical requests
+    will return the current confirmation instead of
+    creating duplicate check-ins.
+    """
+
+    access, patient = (
+        get_caregiver_patient_access(
+            db,
+            patient_id=patient_id,
+            current_user=current_user,
+        )
+    )
+
+    require_caregiver_permission(
+        db,
+        caregiver_access_id=access.id,
+        permission=(
+            CaregiverPermissionType
+            .TRANSPORTATION
+        ),
+    )
+
+    latest = (
+        get_latest_transportation_check_in(
+            db,
+            patient_id=patient.id,
+        )
+    )
+
+    # ---------------------------------------------------------
+    # Idempotency
+    #
+    # If the current transportation state is already
+    # confirmed, do not create another identical event.
+    # ---------------------------------------------------------
+
+    if (
+        latest is not None
+        and latest.transportation_confirmed
+        is True
+    ):
+        return {
+            "confirmed": True,
+            "confirmed_at": (
+                latest.created_at
+            ),
+        }
+
+    check_in = CheckIn(
+        patient_id=patient.id,
+        submitted_by_user_id=(
+            current_user.id
+        ),
+        source=CheckInSource.CAREGIVER,
+        symptom_severity=None,
+        transportation_confirmed=True,
+        medication_access_issue=False,
+        financial_concern=False,
+        requested_help=False,
+        free_text=(
+            "Caregiver confirmed "
+            f"transportation for "
+            f"{patient.first_name}."
+        ),
+        submitted_for_relationship=(
+            access.relationship
+        ),
+    )
+
+    db.add(check_in)
+    db.flush()
+
+    # A positive transportation confirmation does
+    # not currently create a navigation signal, but
+    # keeping this call here makes the mutation use
+    # the same signal pipeline as other check-ins.
+    generate_signals_from_check_in(
+        db,
+        check_in=check_in,
+    )
+
+    # Re-evaluate navigation context immediately so
+    # current needs/attention reflect the new evidence.
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient.id,
+    )
+
+    write_audit_log(
+        db,
+        organization_id=(
+            current_user.organization_id
+        ),
+        actor_user_id=current_user.id,
+        patient_id=patient.id,
+        action=(
+            "CAREGIVER_TRANSPORTATION_CONFIRMED"
+        ),
+        resource_type="check_in",
+        resource_id=str(
+            check_in.id
+        ),
+        metadata_json={
+            "caregiver_access_id": str(
+                access.id
+            ),
+        },
+    )
+
+    db.commit()
+    db.refresh(check_in)
+
+    return {
+        "confirmed": True,
+        "confirmed_at": (
+            check_in.created_at
+        ),
+    }
 
 
 @router.get(
@@ -565,7 +826,8 @@ def list_caregiver_patients(
         select(
             CaregiverPatientAccess
         ).where(
-            CaregiverPatientAccess.caregiver_user_id
+            CaregiverPatientAccess
+            .caregiver_user_id
             == current_user.id,
             CaregiverPatientAccess.status
             == CaregiverAccessStatus.ACTIVE,

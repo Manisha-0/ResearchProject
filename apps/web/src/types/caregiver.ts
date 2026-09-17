@@ -44,6 +44,12 @@ export type CaregiverPortalPatient = {
 
   permissions: CaregiverPermission[];
 
+  transportation: {
+  confirmed: boolean;
+  confirmed_at: string | null;
+  confirmed_by_current_caregiver: boolean;
+  };
+
   next_appointment:
     | CaregiverAppointment
     | null;
@@ -127,3 +133,4 @@ export type CaregiverDocumentAccessResponse = {
 
   expires_in_seconds: number;
 };
+
