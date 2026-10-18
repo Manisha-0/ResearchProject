@@ -128,6 +128,7 @@ class AgentResult:
     turn: cs.Turn
     history: list[dict]
     fell_back: bool = False
+    error: str | None = None
 
 
 # ---------------------------------------------------------
@@ -163,6 +164,7 @@ def build_system_prompt(
             "As soon as it is clear, call confirm_identity.",
             "If it is someone else who does not help the patient, call confirm_identity with wrong_person.",
             "Do not talk about appointments, health or anything private until identity is confirmed.",
+            "If they ask for a real person, say you can arrange that and first need to know who you are speaking with.",
         ]
         return "\n".join(lines)
 
@@ -342,6 +344,7 @@ def agent_turn(
     model: AgentModel,
     navigator: NavigatorInfo | None = None,
     digits: str | None = None,
+    time_budget: float | None = ROUND_BUDGET_SECONDS,
 ) -> AgentResult:
     history = list(history)
     text = (caller_text or "").strip()
@@ -370,8 +373,7 @@ def agent_turn(
     started = time.monotonic()
     try:
         for round_number in range(MAX_TOOL_ROUNDS + 1):
-            if round_number and time.monotonic() - started > ROUND_BUDGET_SECONDS:
-                raise TimeoutError("Agent took too long for a live call.")
+            if round_number and time_budget and time.monotonic() - started > time_budget:                raise TimeoutError("Agent took too long for a live call.")
             reply = model.generate(build_system_prompt(state, ctx, navigator), history)
             history.append({
                 "role": "model",
@@ -427,8 +429,11 @@ def agent_turn(
         raise ValueError("Model used too many tool rounds without speaking.")
 
     except Exception as exc:  # noqa: BLE001 - any model failure falls back
-        logger.warning("Agent caller failed, falling back to the script: %s", exc)
-        return _fall_back_to_script(state, ctx, history)
+        reason = f"{type(exc).__name__}: {exc}"[:400]
+        logger.warning("Agent caller failed, falling back to the script: %s", reason)
+        result = _fall_back_to_script(state, ctx, history)
+        result.error = reason
+        return result
 
 
 def _fall_back_to_script(
@@ -525,7 +530,7 @@ TOOL_SCHEMAS = [
 
 
 class GeminiAgentModel:
-    def __init__(self, *, api_key: str, model_name: str, timeout_ms: int = 6000):
+    def __init__(self, *, api_key: str, model_name: str, timeout_ms: int = 12000):
         from google import genai
         from google.genai import types
 
@@ -558,6 +563,11 @@ class GeminiAgentModel:
                 contents[-1].parts.extend(parts)
             else:
                 contents.append(types.Content(role=role, parts=parts))
+                # Gemini expects a conversation to start with the user.
+        # Our calls start with the agent's greeting, so open with
+        # a short note that the phone was answered.
+        if history and history[0]["role"] != "user":
+            add("user", [types.Part(text="(The phone call has connected. You speak first.)")])
 
         for entry in history:
             role = entry["role"]

@@ -248,6 +248,17 @@ export function CallSimulator({
               <LoaderCircle className="h-4 w-4 animate-spin" /> Dialling…
             </p>
           )}
+          {mode === "agent" && call?.used_fallback && (
+            <p className="mt-4 rounded-lg bg-priority-medium-tint p-3 text-sm text-ink">
+              The AI agent stopped, so this call continued with the fixed
+              questions.
+              {call.fallback_reason && (
+                <span className="mt-1 block break-words font-semibold">
+                  Error: {call.fallback_reason}
+                </span>
+              )}
+            </p>
+          )}
 
           {error && (
             <p role="alert" className="mt-4 rounded-lg bg-priority-high-tint p-3 text-priority-high">

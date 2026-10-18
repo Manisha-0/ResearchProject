@@ -27,3 +27,10 @@ export async function submitMyCheckIn(
     },
   );
 }
+
+export async function getMyLatestCheckIn(): Promise<CheckInResponse | null> {
+  return authenticatedApiRequest<CheckInResponse | null>(
+    "/me/check-ins/latest",
+    { method: "GET" },
+  );
+}

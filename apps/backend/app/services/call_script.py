@@ -157,7 +157,22 @@ _EMERGENCY = [
     "won't stop bleeding", "passed out", "fainted", "emergency",
     "911", "nine one one", "ambulance", "stroke", "seizure",
 ]
-
+_HUMAN_REQUEST = [
+    "real person", "a person", "talk to someone", "speak to someone",
+    "talk to somebody", "speak to somebody", "speak with someone",
+    "talk with someone", "a human", "an operator", "operator",
+    "representative", "a nurse", "my nurse", "my navigator",
+    "someone call me", "somebody call me", "call me back",
+    "have someone call", "talk to a", "speak to a", "speak with a",
+    "talk with a", "not a machine", "not a robot",
+]
+_HUMAN_TOPICS = [
+    ("ride", ["ride", "transport", "drive", "get there", "car"]),
+    ("medicine", ["medicine", "medication", "pharmacy", "pill", "prescription"]),
+    ("cost_insurance", ["bill", "insurance", "cost", "money", "pay", "afford"]),
+    ("symptoms", ["nurse", "doctor", "pain", "sick", "feel", "dizzy", "symptom"]),
+    ("appointment", ["appointment", "reschedule", "cancel", "time", "date"]),
+]
 _SELF_HARM = [
     "kill myself", "suicide", "want to die", "end my life",
     "hurt myself", "don't want to live", "dont want to live",
@@ -184,6 +199,16 @@ def _has_phrase(text: str, phrases: list[str]) -> bool:
     padded = f" {text} "
     return any(f" {p} " in padded for p in phrases)
 
+def detect_human_request(text: str) -> str | None:
+    """Return a topic if the caller is asking to speak with a person."""
+
+    cleaned = _clean(text)
+    if not cleaned or not _has_phrase(cleaned, _HUMAN_REQUEST):
+        return None
+    for topic, words in _HUMAN_TOPICS:
+        if _has_phrase(cleaned, words) or any(w in cleaned for w in words if " " in w):
+            return topic
+    return "other"
 
 def detect_emergency(text: str) -> str | None:
     cleaned = _clean(text)
@@ -545,6 +570,12 @@ def advance(
     if danger:
         return danger
 
+        # A request for a person. The fixed caller cannot put the
+    # call through, so it books a call back and carries on.
+    topic = detect_human_request(text)
+    if topic:
+        return _handle_human_request(state, ctx, text, topic)
+
     value = _interpret(step, last_question, text, digits, ctx, interpreter)
 
     if value == UNCLEAR:
@@ -598,8 +629,51 @@ def advance(
     if next_step == DONE:
         return Turn(say=closing(state, ctx), step=DONE, done=True)
 
-    return prompt_for(next_step, state, ctx)
+    turn = prompt_for(next_step, state, ctx)
+    if step == ATTENDANCE and value in ("no", "unsure"):
+        turn.say = (
+            "I am sorry to hear that. I will let the care team know, "
+            "so they can help. " + turn.say
+        )
+    return turn
 
+
+def _handle_human_request(state: CallState, ctx: CallContext, text: str, topic: str) -> Turn:
+    step = state.step
+
+    if step in (IDENTITY, IDENTITY_CONFIRM):
+        # Book nothing and share nothing until we know who this is.
+        state.reprompts = 0
+        return Turn(
+            say=(
+                f"I can arrange for a person to call. First I need to check "
+                f"who I am speaking with. Is this {ctx.patient_first_name}, "
+                f"or someone who helps {ctx.patient_first_name}?"
+            ),
+            step=step,
+            expects="identity",
+        )
+
+    state.callback = {
+        "topic": topic,
+        "urgency": "today" if topic in ("symptoms", "ride", "appointment") else "routine",
+        "reason": text.strip()[:300],
+    }
+    state.answers["callback"] = "yes"
+    state.reprompts = 0
+    who = ctx.patient_first_name if state.answered_by == "caregiver" else "you"
+    ack = f"Of course. I will ask the navigator to call {who} back"
+    ack += " today." if state.callback["urgency"] == "today" else " soon."
+
+    if step == CALLBACK:
+        state.step = DONE
+        return Turn(say=f"{ack} {closing(state, ctx)}", step=DONE, done=True)
+
+    return Turn(
+        say=f"{ack} If that is okay, I have a few more quick questions. {prompt_for(step, state, ctx).say}",
+        step=step,
+        expects=prompt_for(step, state, ctx).expects,
+    )
 
 def handle_emergency(state: CallState, text: str) -> Turn | None:
     """

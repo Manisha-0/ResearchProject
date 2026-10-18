@@ -19,7 +19,7 @@ import { CheckInForm } from "@/components/patient/CheckInForm";
 import { PatientDocuments } from "@/components/patient/PatientDocuments";
 
 import { ApiError } from "@/lib/api";
-import { getMyJourney } from "@/lib/patient-api";
+import { getMyJourney, getMyLatestCheckIn } from "@/lib/patient-api";
 
 import { useAuthStore } from "@/store/auth-store";
 
@@ -68,9 +68,13 @@ export default function PatientPage() {
     setError(null);
 
     try {
-      const data = await getMyJourney();
+      const [data, latest] = await Promise.all([
+        getMyJourney(),
+        getMyLatestCheckIn().catch(() => null),
+      ]);
 
       setJourney(data);
+      setLatestCheckIn(latest);
     } catch (caughtError) {
       handleRequestError(caughtError);
     } finally {
@@ -83,10 +87,15 @@ export default function PatientPage() {
 
     async function fetchJourney() {
       try {
-        const data = await getMyJourney();
+        const [data, latest] = await Promise.all([
+          getMyJourney(),
+          // Not essential for the page; ignore if it fails.
+          getMyLatestCheckIn().catch(() => null),
+        ]);
 
         if (!cancelled) {
           setJourney(data);
+          setLatestCheckIn(latest);
         }
       } catch (caughtError) {
         if (!cancelled) {
@@ -139,7 +148,10 @@ export default function PatientPage() {
             />
 
             <div className="mt-10 space-y-10">
-              <CheckInForm onSubmitted={setLatestCheckIn} />
+              <CheckInForm
+                lastCheckIn={latestCheckIn}
+                onSubmitted={setLatestCheckIn}
+              />
 
               <CareJourney journey={journey} />
 

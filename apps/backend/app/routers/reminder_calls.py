@@ -64,6 +64,7 @@ def _detail(call: ReminderCall) -> ReminderCallDetail:
             "check_in_id": call.check_in_id,
             "error_message": call.error_message,
             "used_fallback": bool(meta.get("fell_back")),
+            "fallback_reason": meta.get("fallback_reason"),
         }
     )
 

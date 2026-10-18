@@ -300,6 +300,12 @@ def reply(
             model=get_agent_model(),
             navigator=navigator,
             digits=digits,
+            # A phone line cannot wait long; a practice call can.
+            time_budget=(
+                call_agent.ROUND_BUDGET_SECONDS
+                if call.channel == ReminderCallChannel.PHONE
+                else None
+            ),
         )
         call.agent_history = result.history
         turn = result.turn
@@ -307,6 +313,7 @@ def reply(
             # The rest of this call uses the fixed questions.
             meta = dict((call.answers or {}).get("_meta", {}))
             meta["fell_back"] = True
+            meta["fallback_reason"] = result.error
             call.answers = {**(call.answers or {}), "_meta": meta}
     else:
         if call.mode == AGENT:

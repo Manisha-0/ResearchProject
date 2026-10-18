@@ -54,6 +54,7 @@ export type ReminderCallDetail = ReminderCallSummary & {
   check_in_id: string | null;
   error_message: string | null;
   used_fallback: boolean;
+  fallback_reason: string | null;
 };
 
 export type UpcomingCallItem = {

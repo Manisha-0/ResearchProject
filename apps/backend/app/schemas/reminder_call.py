@@ -46,6 +46,7 @@ class ReminderCallDetail(ReminderCallSummary):
     check_in_id: uuid.UUID | None
     error_message: str | None
     used_fallback: bool = False
+    fallback_reason: str | None = None
 
 
 class UpcomingCallItem(BaseModel):

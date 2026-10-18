@@ -241,6 +241,58 @@ def build_check_in_response(
 
 
 # =========================================================
+# Latest check-in (for the patient's home page)
+# =========================================================
+
+
+@router.get(
+    "/latest",
+    response_model=CheckInResponse | None,
+)
+def get_my_latest_check_in(
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.PATIENT,
+            )
+        ),
+    ],
+) -> CheckInResponse | None:
+    """
+    The patient's most recent check-in from any source:
+    the app, a caregiver, or a reminder call. Lets the home
+    page show "checked in today" instead of an empty form.
+    """
+
+    patient = db.scalar(
+        select(PatientProfile).where(
+            PatientProfile.user_id
+            == current_user.id
+        )
+    )
+
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient profile not found.",
+        )
+
+    latest = db.scalar(
+        select(CheckIn)
+        .where(CheckIn.patient_id == patient.id)
+        .order_by(CheckIn.created_at.desc())
+        .limit(1)
+    )
+
+    return build_check_in_response(latest) if latest else None
+
+
+# =========================================================
 # Patient self check-in
 # =========================================================
 

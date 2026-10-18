@@ -123,10 +123,17 @@ export function CallRecordDialog({
               )}
 
               {call.used_fallback && (
-                <p className="mt-3 text-sm text-ink-soft">
-                  The AI agent had a problem during this call, so the rest of
-                  the call used the fixed questions.
-                </p>
+                <div className="mt-3 rounded-[10px] bg-priority-medium-tint p-3 text-sm text-ink">
+                  <p>
+                    The AI agent had a problem during this call, so the rest of
+                    the call used the fixed questions.
+                  </p>
+                  {call.fallback_reason && (
+                    <p className="mt-1 break-words font-semibold">
+                      Error: {call.fallback_reason}
+                    </p>
+                  )}
+                </div>
               )}
 
               {call.error_message && (

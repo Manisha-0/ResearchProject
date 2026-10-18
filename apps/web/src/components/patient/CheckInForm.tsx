@@ -31,12 +31,15 @@ type MedicationStatus =
   | "having_trouble";
 
 type CheckInFormProps = {
+  /** Most recent check-in from any source (app, caregiver, phone call). */
+  lastCheckIn?: CheckInResponse | null;
   onSubmitted?: (
     checkIn: CheckInResponse,
   ) => void;
 };
 
 export function CheckInForm({
+  lastCheckIn = null,
   onSubmitted,
 }: CheckInFormProps) {
   const [symptomLevel, setSymptomLevel] =
@@ -71,7 +74,9 @@ export function CheckInForm({
   const [note, setNote] =
     useState("");
 
-  const [submitted, setSubmitted] =
+  // When already checked in today, the summary shows until
+  // the patient chooses to change their answers.
+  const [editing, setEditing] =
     useState(false);
 
   const [isSubmitting, setIsSubmitting] =
@@ -117,7 +122,7 @@ export function CheckInForm({
               : null,
         });
 
-      setSubmitted(true);
+      setEditing(false);
 
       onSubmitted?.(checkIn);
     } catch (caughtError) {
@@ -131,39 +136,28 @@ export function CheckInForm({
     }
   }
 
-  if (submitted) {
+  function startEditing(from: CheckInResponse) {
+    setSymptomLevel(levelFromSeverity(from.symptom_severity));
+    setTransportStatus(
+      from.transportation_confirmed === true
+        ? "confirmed"
+        : from.transportation_confirmed === false
+          ? "unavailable"
+          : "not_sure",
+    );
+    setMedicationStatus(from.medication_access_issue ? "having_trouble" : "on_track");
+    setFinancialConcern(from.financial_concern);
+    setRequestedHelp(from.requested_help);
+    setNote(from.source === "patient" ? (from.free_text ?? "") : "");
+    setEditing(true);
+  }
+
+  if (lastCheckIn && isToday(lastCheckIn.created_at) && !editing) {
     return (
-      <div className="rounded-2xl border border-priority-low/20 bg-priority-low-tint p-6">
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-priority-low" />
-
-          <div>
-            <h2 className="font-semibold text-ink">
-              Thank you.
-            </h2>
-
-            <p className="mt-2 text-base leading-6 text-ink-soft">
-              Your care navigation team can now
-              see your update.
-            </p>
-
-            {transportStatus !==
-              "confirmed" && (
-              <p className="mt-3 text-base font-medium text-pine">
-                We noticed you may need help
-                with transportation.
-              </p>
-            )}
-
-            {requestedHelp && (
-              <p className="mt-2 text-base font-medium text-pine">
-                Your request for navigator
-                support was included.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      <CheckedInToday
+        checkIn={lastCheckIn}
+        onChange={() => startEditing(lastCheckIn)}
+      />
     );
   }
 
@@ -483,4 +477,104 @@ function getTransportationValue(
     case "unavailable":
       return false;
   }
+}
+function isToday(value: string) {
+  const date = new Date(value);
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+/** Phone calls record 0-10; the app uses four levels. */
+function levelFromSeverity(value: number | null): SymptomLevel {
+  if (value === null || value === 0) return "none";
+  if (value <= 3) return "mild";
+  if (value <= 6) return "moderate";
+  return "severe";
+}
+
+const LEVEL_LABEL: Record<SymptomLevel, string> = {
+  none: "None",
+  mild: "Mild",
+  moderate: "Moderate",
+  severe: "Severe",
+};
+
+function CheckedInToday({
+  checkIn,
+  onChange,
+}: {
+  checkIn: CheckInResponse;
+  onChange: () => void;
+}) {
+  const time = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(checkIn.created_at));
+
+  const heading =
+    checkIn.source === "voice_call"
+      ? `We spoke on the phone today at ${time}`
+      : checkIn.source === "caregiver"
+        ? `Someone helping you checked in today at ${time}`
+        : `You checked in today at ${time}`;
+
+  const ride =
+    checkIn.transportation_confirmed === true
+      ? "Set"
+      : checkIn.transportation_confirmed === false
+        ? "Needs help"
+        : "Not sure";
+
+  const rows: [string, string][] = [
+    ["Symptoms", LEVEL_LABEL[levelFromSeverity(checkIn.symptom_severity)]],
+    ["Ride to your visit", ride],
+    ["Medicines", checkIn.medication_access_issue ? "Having trouble" : "Okay"],
+    ["Money or insurance worries", checkIn.financial_concern ? "Yes" : "No"],
+    ["Navigator call", checkIn.requested_help ? "Requested" : "Not needed"],
+  ];
+
+  const needsHelp =
+    checkIn.transportation_confirmed !== true ||
+    checkIn.medication_access_issue ||
+    checkIn.financial_concern ||
+    checkIn.requested_help;
+
+  return (
+    <section className="rounded-[14px] border border-priority-low/30 bg-priority-low-tint p-5 sm:p-8">
+      <div className="flex items-start gap-3">
+        <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-priority-low" />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[1.5rem] font-bold leading-tight text-pine-deep">
+            {heading}
+          </h2>
+          <p className="mt-1 text-base text-ink-soft">
+            {needsHelp
+              ? "Your care team can see these answers and will reach out to help."
+              : "Thank you. Your care team can see these answers."}
+          </p>
+
+          <dl className="mt-5 grid gap-x-8 gap-y-2 text-base sm:grid-cols-2">
+            {rows.map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4 border-b border-priority-low/20 py-1.5">
+                <dt className="text-ink-soft">{label}</dt>
+                <dd className="font-semibold text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <button
+            type="button"
+            onClick={onChange}
+            className="mt-6 min-h-12 rounded-lg border-2 border-pine bg-white px-5 font-semibold text-pine hover:bg-pine-tint"
+          >
+            Something changed? Update my answers
+          </button>
+        </div>
+      </div>
+    </section>
+  );
 }
