@@ -17,6 +17,7 @@ import { ApiError } from "@/lib/api";
 import { getUpcomingCalls, startCall } from "@/lib/reminder-call-api";
 
 import type {
+  ReminderCallMode,
   UpcomingCallItem,
   UpcomingCallsResponse,
 } from "@/types/reminder-call";
@@ -28,6 +29,7 @@ export default function ReminderCallsPage() {
   const [simulating, setSimulating] = useState<UpcomingCallItem | null>(null);
   const [viewing, setViewing] = useState<UpcomingCallItem | null>(null);
   const [dialling, setDialling] = useState<string | null>(null);
+  const [chosenMode, setChosenMode] = useState<ReminderCallMode | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -69,7 +71,7 @@ export default function ReminderCallsPage() {
     setDialling(item.appointment_id);
     setNotice(null);
     try {
-      await startCall(item.appointment_id, "phone");
+      await startCall(item.appointment_id, "phone", mode);
       setNotice(`Calling ${item.patient_first_name} now.`);
       await load();
     } catch (caught) {
@@ -79,6 +81,8 @@ export default function ReminderCallsPage() {
     }
   }
 
+  const mode: ReminderCallMode =
+    chosenMode ?? (data?.agent_available ? data.default_mode : "scripted");
   const items = data ? sortForNavigator(data.items) : [];
   const needsPerson = items.filter((item) =>
     ["urgent", "attention"].includes(describeCall(item.latest_call).tone),
@@ -144,6 +148,33 @@ export default function ReminderCallsPage() {
           </div>
         )}
 
+        {data && (
+          <fieldset className="mt-6">
+            <legend className="text-sm font-semibold text-ink">Who makes the call</legend>
+            <div className="mt-2 inline-flex rounded-lg border border-border bg-white p-1">
+              <ModeButton
+                active={mode === "scripted"}
+                onClick={() => setChosenMode("scripted")}
+              >
+                Fixed questions
+              </ModeButton>
+              <ModeButton
+                active={mode === "agent"}
+                disabled={!data.agent_available}
+                onClick={() => setChosenMode("agent")}
+              >
+                AI agent
+              </ModeButton>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+              {mode === "agent"
+                ? "The AI agent talks naturally and can put the caller through to their navigator. Emergencies, privacy and priority are still handled by fixed rules."
+                : "The same short questions, in the same order, every time."}
+              {!data.agent_available && " The AI agent needs a GEMINI_API_KEY in the backend."}
+            </p>
+          </fieldset>
+        )}
+
         {items.length > 0 && (
           <>
             <p className="mt-8 font-semibold text-ink">
@@ -171,6 +202,7 @@ export default function ReminderCallsPage() {
       {simulating && (
         <CallSimulator
           item={simulating}
+          mode={mode}
           onClose={(changed) => {
             setSimulating(null);
             if (changed) void load();
@@ -272,5 +304,31 @@ function CallRow({
         )}
       </div>
     </li>
+  );
+}
+
+function ModeButton({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors disabled:opacity-40 ${
+        active ? "bg-pine text-white" : "text-ink-soft hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

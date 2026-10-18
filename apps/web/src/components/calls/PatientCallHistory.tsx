@@ -78,6 +78,7 @@ export function PatientCallHistory({
                     <span className="text-sm text-ink-soft">
                       {formatClock(call.started_at ?? call.created_at)},{" "}
                       {call.channel === "phone" ? "phone" : "practice"}
+                      {call.mode === "agent" ? ", AI agent" : ""}
                     </span>
                   </span>
                   {call.summary && (

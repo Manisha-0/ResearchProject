@@ -1,5 +1,9 @@
 export type ReminderCallChannel = "phone" | "simulated";
 
+export type ReminderCallMode = "scripted" | "agent";
+
+export type TransferStatus = "dialing" | "connected" | "no_answer" | "simulated";
+
 export type ReminderCallStatus =
   | "queued"
   | "ringing"
@@ -36,6 +40,11 @@ export type ReminderCallSummary = {
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
+  mode: ReminderCallMode;
+  transfer_status: TransferStatus | null;
+  callback_topic: string | null;
+  callback_urgency: "urgent" | "today" | "routine" | null;
+  callback_reason: string | null;
 };
 
 export type ReminderCallDetail = ReminderCallSummary & {
@@ -44,6 +53,7 @@ export type ReminderCallDetail = ReminderCallSummary & {
   answers: Record<string, unknown>;
   check_in_id: string | null;
   error_message: string | null;
+  used_fallback: boolean;
 };
 
 export type UpcomingCallItem = {
@@ -66,6 +76,8 @@ export type UpcomingCallItem = {
 export type UpcomingCallsResponse = {
   phone_calls_enabled: boolean;
   auto_dial_enabled: boolean;
+  agent_available: boolean;
+  default_mode: ReminderCallMode;
   window_hours: number;
   items: UpcomingCallItem[];
 };
@@ -74,5 +86,5 @@ export type ReminderCallTurn = {
   call: ReminderCallDetail;
   say: string;
   done: boolean;
-  expects: "yes_no" | "identity" | "number" | "free_text" | "none";
+  expects: "yes_no" | "identity" | "number" | "free_text" | "agent" | "none";
 };

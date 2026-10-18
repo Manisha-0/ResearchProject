@@ -32,6 +32,15 @@ export function describeCall(call: ReminderCallSummary | null): {
 
   const who = call.answered_by === "caregiver" ? "caregiver" : "patient";
 
+  if (call.transfer_status === "dialing")
+    return { label: "Connecting to navigator", tone: "waiting" };
+  if (call.transfer_status === "connected")
+    return { label: `Put through to navigator`, tone: "done" };
+  if (call.transfer_status === "no_answer")
+    return { label: "Navigator missed it, call back due", tone: "attention" };
+  if (call.callback_urgency === "urgent" || call.callback_urgency === "today")
+    return { label: `Reached ${who}, call back today`, tone: "attention" };
+
   if (call.needs_follow_up)
     return { label: `Reached ${who}, needs follow-up`, tone: "attention" };
 
@@ -97,3 +106,12 @@ export function formatClock(value: string | null) {
     minute: "2-digit",
   }).format(new Date(value));
 }
+
+export const TOPIC_LABELS: Record<string, string> = {
+  symptoms: "symptoms",
+  medicine: "medicines",
+  ride: "a ride",
+  cost_insurance: "cost or insurance",
+  appointment: "the appointment",
+  other: "a question",
+};

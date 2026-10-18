@@ -105,6 +105,7 @@ _HINTS = {
     "identity": "yes, no, speaking, daughter, son, wife, husband, caregiver",
     "number": "zero, one, two, three, four, five, six, seven, eight, nine, ten",
     "free_text": "",
+    "agent": "",
 }
 
 
@@ -120,10 +121,12 @@ def gather(*, say: str, call_id: str, expects: str) -> str:
     # Keypad answers help people who find speaking to a
     # machine hard. Free text has no keypad option.
     input_type = "speech" if expects == "free_text" else "speech dtmf"
+    # The agent asks open questions, so give people a bit
+    # longer to start talking.
     num_digits = ' numDigits="2"' if expects == "number" else ' numDigits="1"'
     hints = _HINTS.get(expects, "")
     hints_attr = f' hints="{escape(hints)}"' if hints else ""
-    timeout = "8" if expects == "free_text" else "6"
+    timeout = "8" if expects in ("free_text", "agent") else "6"
 
     return (
         '<?xml version="1.0" encoding="UTF-8"?><Response>'
@@ -141,4 +144,19 @@ def hang_up(*, say: str) -> str:
     return (
         '<?xml version="1.0" encoding="UTF-8"?><Response>'
         f"{_say(say)}<Hangup/></Response>"
+    )
+
+
+def transfer(*, say: str, phone: str, call_id: str) -> str:
+    """Put the caller through to their navigator's phone."""
+
+    action = escape(public_url(f"/voice/reminder-calls/{call_id}/transfer-result"))
+    caller_id = escape(settings.twilio_from_number or "")
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?><Response>'
+        f"{_say(say)}"
+        f'<Dial timeout="20" callerId="{caller_id}" action="{action}" method="POST">'
+        f"<Number>{escape(phone)}</Number>"
+        "</Dial>"
+        "</Response>"
     )

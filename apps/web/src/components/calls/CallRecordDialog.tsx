@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { CallTranscript } from "@/components/calls/CallTranscript";
 import {
+  TOPIC_LABELS,
   describeCall,
   formatClock,
   toneClasses,
@@ -57,6 +58,7 @@ export function CallRecordDialog({
             {call && (
               <p className="text-sm text-ink-soft">
                 {call.channel === "phone" ? "Phone call" : "Practice call"}
+                {call.mode === "agent" ? " by the AI agent" : " with fixed questions"}
                 {call.phone_number && ` to ${call.phone_number}`},{" "}
                 {formatClock(call.started_at ?? call.created_at)}
                 {call.attempt_number > 1 && `, try ${call.attempt_number}`}
@@ -93,6 +95,37 @@ export function CallRecordDialog({
               {call.summary && (
                 <p className="mt-3 text-[1.05rem] leading-7 text-ink">
                   {call.summary}
+                </p>
+              )}
+
+              {call.callback_topic && (
+                <div className="mt-4 rounded-[10px] border border-border p-4">
+                  <p className="font-semibold text-ink">
+                    Wants a person to help with{" "}
+                    {TOPIC_LABELS[call.callback_topic] ?? "a question"}
+                    {call.callback_urgency && `, ${call.callback_urgency}`}
+                  </p>
+                  {call.callback_reason && (
+                    <p className="mt-1 text-ink-soft">{call.callback_reason}</p>
+                  )}
+                  <p className="mt-1 text-sm text-ink-soft">
+                    {call.transfer_status === "connected" &&
+                      "The caller was put through to their navigator."}
+                    {call.transfer_status === "no_answer" &&
+                      "Their navigator did not answer the transfer. A call-back need was added to the patient's record."}
+                    {call.transfer_status === "dialing" && "Connecting to their navigator now."}
+                    {call.transfer_status === "simulated" &&
+                      "On a phone call this would have been put through to their navigator. A call-back need was added."}
+                    {!call.transfer_status &&
+                      "A call-back need with a due time was added to the patient's record."}
+                  </p>
+                </div>
+              )}
+
+              {call.used_fallback && (
+                <p className="mt-3 text-sm text-ink-soft">
+                  The AI agent had a problem during this call, so the rest of
+                  the call used the fixed questions.
                 </p>
               )}
 

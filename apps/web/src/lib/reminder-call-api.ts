@@ -3,6 +3,7 @@ import { authenticatedApiRequest } from "@/lib/api";
 import type {
   ReminderCallChannel,
   ReminderCallDetail,
+  ReminderCallMode,
   ReminderCallSummary,
   ReminderCallTurn,
   UpcomingCallsResponse,
@@ -29,10 +30,11 @@ export function getCall(callId: string) {
 export function startCall(
   appointmentId: string,
   channel: ReminderCallChannel,
+  mode?: ReminderCallMode,
 ) {
   return authenticatedApiRequest<ReminderCallTurn>("/reminder-calls", {
     method: "POST",
-    body: JSON.stringify({ appointment_id: appointmentId, channel }),
+    body: JSON.stringify({ appointment_id: appointmentId, channel, mode }),
   });
 }
 

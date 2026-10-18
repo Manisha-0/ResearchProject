@@ -158,3 +158,28 @@ class ReminderCall(
     error_message: Mapped[str | None] = mapped_column(
         String(500), nullable=True
     )
+
+    # "scripted" or "agent"
+    mode: Mapped[str] = mapped_column(
+        String(20), default="scripted", server_default="scripted", nullable=False
+    )
+
+    # The agent's conversation, including its tool calls.
+    agent_history: Mapped[list] = mapped_column(
+        JSONB, default=list, server_default="[]", nullable=False
+    )
+
+    # Live hand-over to the patient's navigator:
+    # dialing, connected, no_answer, simulated
+    transfer_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    transferred_to_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # Set when the caller asked for a person.
+    callback_topic: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    callback_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    callback_urgency: Mapped[str | None] = mapped_column(String(20), nullable=True)

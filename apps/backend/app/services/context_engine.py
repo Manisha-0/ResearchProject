@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 
 from sqlalchemy import select
@@ -313,6 +313,65 @@ def evaluate_help_request_need(
         signals=[signal],
     )
 
+CALLBACK_RULES = {
+    # signal type: (hours until due, attention status)
+    "callback_urgent": (2, AttentionStatus.NEEDS_ATTENTION),
+    "callback_today": (8, AttentionStatus.NEEDS_ATTENTION),
+    "callback_routine": (24, AttentionStatus.FOLLOW_UP),
+}
+
+CALLBACK_ACTIONS = {
+    "symptoms": "Clinical navigator or nurse: call the patient back about how they are feeling.",
+    "medicines": "Call the patient back and help with getting their medicines.",
+    "a ride": "Call the patient back and arrange transportation before the appointment.",
+    "cost or insurance": "Coverage / financial navigator: call the patient back about cost or insurance.",
+    "the appointment": "Call the patient back about attending or rescheduling the appointment.",
+}
+
+
+def evaluate_callback_need(
+    db: Session,
+    *,
+    patient_id,
+    signals: list[NavigationSignal],
+) -> NavigationNeed | None:
+    """
+    A caller asked a reminder call for a person. Each request
+    becomes its own need, due sooner when it is more urgent.
+    Returns the most recent one (the others are still saved).
+    """
+
+    latest = None
+    for signal in signals:
+        rule = CALLBACK_RULES.get(signal.signal_type)
+        if rule is None:
+            continue
+
+        hours, attention = rule
+        topic = signal.title.removeprefix("Call back requested about ").strip()
+        observed = signal.observed_at or datetime.now(timezone.utc)
+
+        latest = upsert_navigation_need(
+            db,
+            patient_id=patient_id,
+            need_type="callback_request",
+            context_key=f"callback:{signal.source_reference}",
+            title=signal.title,
+            explanation=(
+                signal.description
+                or "The patient asked to speak with a person during a reminder call."
+            ),
+            recommended_action=CALLBACK_ACTIONS.get(
+                topic, "Call the patient back to find out what help they need."
+            ),
+            attention_status=attention,
+            due_at=observed + timedelta(hours=hours),
+            signals=[signal],
+        )
+
+    return latest
+
+
 def evaluate_symptom_need(
     db: Session,
     *,
@@ -440,6 +499,7 @@ def evaluate_patient_context(
         evaluate_transportation_need,
         evaluate_missed_appointment_need,
         evaluate_help_request_need,
+        evaluate_callback_need,
         evaluate_symptom_need,
         evaluate_medication_access_need,
         evaluate_financial_need,

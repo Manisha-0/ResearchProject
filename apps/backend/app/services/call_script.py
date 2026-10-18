@@ -76,6 +76,9 @@ class CallState:
     answers: dict = field(default_factory=dict)
     safety_flag: bool = False
     ended_early: bool = False
+    # Set when the caller asks for a person:
+    # {"topic": ..., "reason": ..., "urgency": ...}
+    callback: dict | None = None
 
     @property
     def finished(self) -> bool:
@@ -90,6 +93,9 @@ class Turn:
     # What kind of answer the next prompt expects. The
     # phone layer uses this to pick keypad hints.
     expects: str = "yes_no"
+    # Phone number to connect the caller to (the patient's
+    # navigator). Only the agent caller sets this.
+    transfer_to: str | None = None
 
 
 # Interpreter signature: (step, question_text, caller_text) -> value
@@ -535,17 +541,9 @@ def advance(
         return Turn(say="", step=DONE, done=True)
 
     # Safety comes before anything else.
-    danger = detect_emergency(text)
+    danger = handle_emergency(state, text)
     if danger:
-        state.safety_flag = True
-        state.ended_early = True
-        state.answers["safety_concern"] = text.strip()
-        state.step = DONE
-        return Turn(
-            say=SELF_HARM_MESSAGE if danger == "self_harm" else SAFETY_MESSAGE,
-            step=DONE,
-            done=True,
-        )
+        return danger
 
     value = _interpret(step, last_question, text, digits, ctx, interpreter)
 
@@ -601,6 +599,33 @@ def advance(
         return Turn(say=closing(state, ctx), step=DONE, done=True)
 
     return prompt_for(next_step, state, ctx)
+
+
+def handle_emergency(state: CallState, text: str) -> Turn | None:
+    """
+    Shared by the scripted and the agent caller. Runs before
+    any interpretation, so an emergency is never left to a
+    language model.
+    """
+
+    danger = detect_emergency(text)
+    if not danger:
+        return None
+
+    state.safety_flag = True
+    state.ended_early = True
+    state.answers["safety_concern"] = text.strip()
+    state.callback = {
+        "topic": "symptoms",
+        "reason": "Caller described a possible emergency during the reminder call.",
+        "urgency": "urgent",
+    }
+    state.step = DONE
+    return Turn(
+        say=SELF_HARM_MESSAGE if danger == "self_harm" else SAFETY_MESSAGE,
+        step=DONE,
+        done=True,
+    )
 
 
 def _end_wrong_person(state: CallState) -> Turn:

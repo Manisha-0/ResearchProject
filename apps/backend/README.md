@@ -1182,3 +1182,80 @@ python -m pytest tests -q
 | `REMINDER_CALL_CRON_SECRET` | none | Secret for `/reminder-calls/run-due`. |
 | `PUBLIC_API_URL` | `http://localhost:8000` | Public URL Twilio calls back to. |
 | `TWILIO_*` | none | Twilio credentials and caller number. |
+
+---
+
+# Agent caller (AI conversation)
+
+Each reminder call can be made by one of two callers:
+
+| | Fixed questions (`scripted`) | AI agent (`agent`) |
+| --- | --- | --- |
+| Who decides what to ask | The script, always in the same order | Gemini, following a checklist |
+| How answers are read | Word matching, then Gemini for unclear answers | Gemini, through checked tools |
+| Caller asks for a person mid-call | Only at the last question | Any time: put through to their navigator, or a call back is booked |
+| If Gemini fails | Keeps going with word matching | Switches to fixed questions for the rest of the call |
+
+The navigator chooses the caller on the **Reminder calls** page
+("Who makes the call"). Automatic calls use `REMINDER_CALL_MODE`.
+
+## How the agent is kept safe
+
+Code in `app/services/call_agent.py` enforces these, not the prompt:
+
+1. **Emergencies** (chest pain, trouble breathing, self-harm...) are caught
+   by fixed word rules *before* Gemini sees the words. The caller is told to
+   call 911 (and 988), and an urgent call back is created.
+2. **Privacy:** until the agent confirms who answered, Gemini is not given
+   the appointment details at all, so it cannot reveal them.
+3. **Four tools only:** `confirm_identity`, `save_answer`, `request_human`
+   and `end_call`. Every call is checked; bad values are rejected and the
+   model is told why.
+4. **No early hang-up:** `end_call` is refused while checklist items are
+   missing, unless the caller declined.
+5. **Time limit:** if Gemini is slow (Twilio waits about 15 s), the call
+   falls back to the fixed questions instead of going silent.
+6. **Priority stays with the rules engine:** the agent only records answers.
+   The same check-in, signals and attention rules run for both callers.
+
+## When a caller asks for a person
+
+```text
+request_human(topic, urgency, reason)
+        |
+        |-- clinic open (CLINIC_HOURS_*, Mon-Fri) and navigator has a phone
+        |        -> call is put through to the patient's assigned navigator (Twilio <Dial>)
+        |             -> navigator answers:  transfer_status = connected
+        |             -> no answer:          transfer_status = no_answer, call back booked
+        |
+        |-- otherwise
+                 -> call back booked; the agent says who will call and when
+```
+
+A booked call back becomes a `callback_<urgency>` navigation signal. The
+rule `evaluate_callback_need` in `context_engine.py` turns it into a need
+on the patient's record:
+
+| Urgency | Due in | Attention |
+| --- | --- | --- |
+| urgent | 2 hours | Needs attention |
+| today | 8 hours | Needs attention |
+| routine | 24 hours | Follow up |
+
+The need's recommended action names who should call: clinical navigator or
+nurse for symptoms; coverage / financial navigator for cost or insurance;
+and so on.
+
+**Give navigators a phone number** (navigator profile, E.164 format such as
+`+19855550100`). Without one, requests always become call backs.
+
+## Evaluation
+
+`evaluation/` compares the callers on 12 made-up scenarios and writes CSVs
+for the results chapter. See `evaluation/README.md`.
+
+## Tests
+
+```bash
+python -m pytest tests -q     # 51 tests, no network needed
+```

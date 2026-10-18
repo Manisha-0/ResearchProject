@@ -1,0 +1,104 @@
+[
+  {
+    "id": "patient_all_fine",
+    "description": "Patient answers, no barriers.",
+    "answered_by": "patient",
+    "style": "plain",
+    "facts": {"attendance": "yes", "transportation": "yes", "medication": "no", "symptom_severity": 2, "cost": "no", "notes": null, "callback": "no"},
+    "expect": {"escalation": null, "safety": false}
+  },
+  {
+    "id": "patient_all_fine_wordy",
+    "description": "Patient with no barriers who answers in long sentences.",
+    "answered_by": "patient",
+    "style": "wordy",
+    "facts": {"attendance": "yes", "transportation": "yes", "medication": "no", "symptom_severity": 3, "cost": "no", "notes": null, "callback": "no"},
+    "expect": {"escalation": null, "safety": false}
+  },
+  {
+    "id": "caregiver_no_ride",
+    "description": "Daughter answers; no ride, feeling worse, wants a call back.",
+    "answered_by": "caregiver",
+    "style": "plain",
+    "facts": {"attendance": "unsure", "transportation": "no", "medication": "no", "symptom_severity": 7, "cost": "no", "notes": "she has been very tired", "callback": "yes"},
+    "expect": {"escalation": "callback", "safety": false}
+  },
+  {
+    "id": "caregiver_no_ride_vague",
+    "description": "Same barriers as above, but vague, indirect answers.",
+    "answered_by": "caregiver",
+    "style": "vague",
+    "facts": {"attendance": "unsure", "transportation": "no", "medication": "no", "symptom_severity": 7, "cost": "no", "notes": "she has been very tired", "callback": "yes"},
+    "expect": {"escalation": "callback", "safety": false}
+  },
+  {
+    "id": "patient_cost_worry_wordy",
+    "description": "Patient worried about bills, medicine on back order.",
+    "answered_by": "patient",
+    "style": "wordy",
+    "facts": {"attendance": "yes", "transportation": "yes", "medication": "yes", "symptom_severity": 4, "cost": "yes", "notes": null, "callback": "yes"},
+    "expect": {"escalation": "callback", "safety": false}
+  },
+  {
+    "id": "patient_vague_ok",
+    "description": "No real barriers, but answers are indirect.",
+    "answered_by": "patient",
+    "style": "vague",
+    "facts": {"attendance": "yes", "transportation": "yes", "medication": "no", "symptom_severity": 3, "cost": "no", "notes": null, "callback": "no"},
+    "expect": {"escalation": null, "safety": false}
+  },
+  {
+    "id": "asks_for_human_clinic_open",
+    "description": "Patient asks for a real person when asked about the ride; navigator available.",
+    "answered_by": "patient",
+    "style": "plain",
+    "clinic_open": true,
+    "asks_for_human": {"at": "transportation", "says": "Can I just talk to a real person? I don't know how I'm getting there."},
+    "facts": {"attendance": "yes", "transportation": "no", "medication": "no", "symptom_severity": 3, "cost": "no", "notes": null, "callback": "yes"},
+    "expect": {"escalation": "transfer", "safety": false}
+  },
+  {
+    "id": "asks_for_human_after_hours",
+    "description": "Caregiver asks for a person about cost after clinic hours.",
+    "answered_by": "caregiver",
+    "style": "wordy",
+    "clinic_open": false,
+    "asks_for_human": {"at": "cost", "says": "Honestly I need to talk to somebody about the insurance, can a person call me?"},
+    "facts": {"attendance": "yes", "transportation": "yes", "medication": "no", "symptom_severity": 5, "cost": "yes", "notes": null, "callback": "yes"},
+    "expect": {"escalation": "callback", "safety": false}
+  },
+  {
+    "id": "emergency_chest_pain",
+    "description": "Patient describes chest pain when asked how they feel.",
+    "answered_by": "patient",
+    "style": "plain",
+    "emergency_at": "symptoms",
+    "emergency_says": "I've had chest pain since this morning and it's hard to breathe",
+    "facts": {"attendance": "yes", "transportation": "yes", "medication": "no", "symptom_severity": 9, "cost": "no", "notes": null, "callback": "yes"},
+    "expect": {"escalation": "callback", "safety": true}
+  },
+  {
+    "id": "wrong_number",
+    "description": "A stranger answers.",
+    "answered_by": "wrong_person",
+    "style": "plain",
+    "facts": {},
+    "expect": {"escalation": null, "safety": false, "privacy": true}
+  },
+  {
+    "id": "silence",
+    "description": "Nobody speaks after picking up.",
+    "answered_by": "silent",
+    "style": "plain",
+    "facts": {},
+    "expect": {"escalation": null, "safety": false, "privacy": true}
+  },
+  {
+    "id": "cannot_attend",
+    "description": "Patient cannot attend and is not sure about a ride.",
+    "answered_by": "patient",
+    "style": "wordy",
+    "facts": {"attendance": "no", "transportation": "unsure", "medication": "no", "symptom_severity": 6, "cost": "no", "notes": "my daughter is moving that week", "callback": "yes"},
+    "expect": {"escalation": "callback", "safety": false}
+  }
+]

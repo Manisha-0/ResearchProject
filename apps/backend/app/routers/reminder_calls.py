@@ -54,6 +54,7 @@ def _summary(call: ReminderCall) -> ReminderCallSummary:
 
 def _detail(call: ReminderCall) -> ReminderCallDetail:
     answers = {k: v for k, v in (call.answers or {}).items() if not k.startswith("_")}
+    meta = (call.answers or {}).get("_meta", {})
     return ReminderCallDetail.model_validate(
         {
             **_summary(call).model_dump(),
@@ -62,6 +63,7 @@ def _detail(call: ReminderCall) -> ReminderCallDetail:
             "answers": answers,
             "check_in_id": call.check_in_id,
             "error_message": call.error_message,
+            "used_fallback": bool(meta.get("fell_back")),
         }
     )
 
@@ -114,6 +116,8 @@ def list_upcoming(db: DB, navigator: Navigator) -> UpcomingCallsResponse:
     return UpcomingCallsResponse(
         phone_calls_enabled=twilio_service.is_configured(),
         auto_dial_enabled=settings.reminder_call_auto_dial,
+        agent_available=bool(settings.gemini_api_key),
+        default_mode=settings.reminder_call_mode,
         window_hours=settings.reminder_call_window_hours,
         items=items,
     )
@@ -162,7 +166,11 @@ def start_call(payload: StartReminderCallRequest, db: DB, navigator: Navigator):
 
     try:
         call = calls.create_call(
-            db, appointment=appointment, channel=payload.channel, initiated_by=navigator
+            db,
+            appointment=appointment,
+            channel=payload.channel,
+            initiated_by=navigator,
+            mode=payload.mode,
         )
     except calls.ReminderCallError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
@@ -293,9 +301,34 @@ async def twilio_reply(call_id: uuid.UUID, request: Request, db: DB):
 
     db.commit()
 
+    if turn.transfer_to:
+        return _xml(twilio_service.transfer(say=turn.say, phone=turn.transfer_to, call_id=str(call.id)))
     if turn.done:
         return _xml(twilio_service.hang_up(say=turn.say))
     return _xml(twilio_service.gather(say=turn.say, call_id=str(call.id), expects=turn.expects))
+
+
+@voice_router.post("/{call_id}/transfer-result")
+async def twilio_transfer_result(call_id: uuid.UUID, request: Request, db: DB):
+    """Twilio calls this when the hand-over to the navigator ends."""
+
+    params = await _twilio_form(request)
+    call = _load_phone_call(db, call_id)
+    connected = params.get("DialCallStatus") == "completed"
+
+    calls.record_transfer_result(db, call, connected=connected)
+    db.commit()
+
+    if connected:
+        return _xml(twilio_service.hang_up(say="Thank you. Goodbye."))
+
+    navigator = calls.get_assigned_navigator(db, call.patient_id)
+    name = navigator.first_name if navigator else "Your navigator"
+    return _xml(
+        twilio_service.hang_up(
+            say=f"{name} could not answer right now. They will call you back soon. Goodbye."
+        )
+    )
 
 
 @voice_router.post("/{call_id}/status")

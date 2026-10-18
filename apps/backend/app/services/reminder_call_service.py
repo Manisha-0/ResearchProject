@@ -1,12 +1,13 @@
 """
 Reminder calls: database side.
 
-call_script.py holds the conversation. This module loads
-and saves call state, writes the transcript, and when the
-call ends turns the answers into a regular Compass
-check-in so the existing signal and attention rules pick
-them up. Navigation priority is still decided only by the
-rules engine.
+call_script.py (fixed questions) and call_agent.py (Gemini
+agent) hold the conversation. This module loads and saves
+call state, writes the transcript, finds the patient's
+navigator for hand-overs, and when the call ends turns the
+answers into a regular Compass check-in so the existing
+signal and attention rules pick them up. Navigation priority
+is still decided only by the rules engine.
 """
 
 from __future__ import annotations
@@ -25,20 +26,30 @@ from app.models.check_in import CheckIn
 from app.models.enums import (
     AppointmentStatus,
     CheckInSource,
+    NavigationSignalCategory,
+    NavigationSignalSourceType,
     ReminderCallAnsweredBy,
     ReminderCallChannel,
     ReminderCallStatus,
 )
 from app.models.journey import CareJourneyItem
+from app.models.navigator import NavigatorProfile
 from app.models.organization import Organization
 from app.models.patient import NavigatorPatientAssignment, PatientProfile
 from app.models.reminder_call import ReminderCall
 from app.models.user import User
-from app.services import call_script
+from app.services import call_agent, call_script
 from app.services.audit_service import write_audit_log
 from app.services.call_interpreter import get_interpreter
 from app.services.context_engine import evaluate_and_snapshot_patient
-from app.services.signal_service import generate_signals_from_check_in
+from app.services.signal_service import (
+    create_signal_if_missing,
+    generate_signals_from_check_in,
+)
+
+SCRIPTED = "scripted"
+AGENT = "agent"
+MODES = (SCRIPTED, AGENT)
 
 ACTIVE_STATUSES = (
     ReminderCallStatus.QUEUED,
@@ -129,6 +140,7 @@ def _state_from_call(call: ReminderCall) -> call_script.CallState:
         answers=answers,
         safety_flag=call.safety_flag,
         ended_early=meta.get("ended_early", False),
+        callback=meta.get("callback"),
     )
 
 
@@ -138,7 +150,9 @@ def _save_state(call: ReminderCall, state: call_script.CallState) -> None:
     call.safety_flag = state.safety_flag
     if state.answered_by:
         call.answered_by = ReminderCallAnsweredBy(state.answered_by)
-    call.answers = {**state.answers, "_meta": {"ended_early": state.ended_early}}
+    meta = dict((call.answers or {}).get("_meta", {}))
+    meta.update({"ended_early": state.ended_early, "callback": state.callback})
+    call.answers = {**state.answers, "_meta": meta}
 
 
 def _append(call: ReminderCall, speaker: str, text: str, step: str) -> None:
@@ -167,7 +181,12 @@ def create_call(
     appointment: Appointment,
     channel: ReminderCallChannel,
     initiated_by: User | None,
+    mode: str | None = None,
 ) -> ReminderCall:
+    mode = mode or settings.reminder_call_mode
+    if mode not in MODES:
+        raise ReminderCallError(f"Unknown call mode {mode!r}.")
+
     patient = db.get(PatientProfile, appointment.patient_id)
     patient_user = db.get(User, patient.user_id)
 
@@ -210,6 +229,8 @@ def create_call(
         answers={},
         needs_follow_up=False,
         safety_flag=False,
+        mode=mode,
+        agent_history=[],
     )
     db.add(call)
     db.flush()
@@ -222,7 +243,7 @@ def create_call(
         action="REMINDER_CALL_CREATED",
         resource_type="reminder_call",
         resource_id=str(call.id),
-        metadata_json={"channel": channel.value, "attempt": call.attempt_number},
+        metadata_json={"channel": channel.value, "mode": mode, "attempt": call.attempt_number},
     )
     return call
 
@@ -234,7 +255,11 @@ def begin(db: Session, call: ReminderCall) -> call_script.Turn:
         raise ReminderCallError("This call has already ended.")
 
     ctx = build_context(db, call)
-    turn = call_script.opening(ctx)
+    if call.mode == AGENT:
+        turn, history = call_agent.agent_opening(ctx)
+        call.agent_history = history
+    else:
+        turn = call_script.opening(ctx)
 
     call.status = ReminderCallStatus.IN_PROGRESS
     call.started_at = call.started_at or _now()
@@ -265,20 +290,57 @@ def reply(
     else:
         _append(call, "caller", "(no answer)", state.step)
 
-    turn = call_script.advance(
-        state,
-        ctx,
-        heard,
-        digits=digits,
-        last_question=_last_agent_line(call),
-        interpreter=get_interpreter(),
-    )
+    if call.mode == AGENT and call.current_step != "fallback":
+        navigator = navigator_info(db, call)
+        result = call_agent.agent_turn(
+            state,
+            ctx,
+            heard,
+            call.agent_history or [],
+            model=get_agent_model(),
+            navigator=navigator,
+            digits=digits,
+        )
+        call.agent_history = result.history
+        turn = result.turn
+        if result.fell_back:
+            # The rest of this call uses the fixed questions.
+            meta = dict((call.answers or {}).get("_meta", {}))
+            meta["fell_back"] = True
+            call.answers = {**(call.answers or {}), "_meta": meta}
+    else:
+        if call.mode == AGENT:
+            state.step = _fallback_step(call)
+        turn = call_script.advance(
+            state,
+            ctx,
+            heard,
+            digits=digits,
+            last_question=_last_agent_line(call),
+            interpreter=get_interpreter(),
+        )
 
     _save_state(call, state)
+    if call.mode == AGENT and not turn.done and turn.step != "agent":
+        # Agent fell back to the script: remember where.
+        _set_fallback_step(call, turn.step)
     if turn.say:
         _append(call, "agent", turn.say, turn.step)
 
     if turn.done:
+        if turn.transfer_to:
+            navigator = get_assigned_navigator(db, call.patient_id)
+            call.transferred_to_user_id = navigator.user_id if navigator else None
+            call.transfer_status = (
+                "dialing" if call.channel == ReminderCallChannel.PHONE else "simulated"
+            )
+            _append(
+                call,
+                "agent",
+                f"(Connecting to {navigator.first_name} {navigator.last_name}, {turn.transfer_to})"
+                if navigator else f"(Connecting to {turn.transfer_to})",
+                "transfer",
+            )
         finish(
             db,
             call,
@@ -286,6 +348,22 @@ def reply(
         )
 
     return turn
+
+
+def get_agent_model():
+    """Separate function so tests can swap in a fake model."""
+    return call_agent.get_agent_model()
+
+
+def _fallback_step(call: ReminderCall) -> str:
+    return (call.answers or {}).get("_meta", {}).get("fallback_step", call_script.IDENTITY)
+
+
+def _set_fallback_step(call: ReminderCall, step: str) -> None:
+    meta = dict((call.answers or {}).get("_meta", {}))
+    meta["fallback_step"] = step
+    call.answers = {**(call.answers or {}), "_meta": meta}
+    call.current_step = "fallback"
 
 
 def hang_up_early(db: Session, call: ReminderCall) -> None:
@@ -307,15 +385,28 @@ def finish(db: Session, call: ReminderCall, *, status: ReminderCallStatus) -> No
     ctx = build_context(db, call)
     state = _state_from_call(call)
 
+    if state.answers.get("callback") == "yes" and not state.callback:
+        state.callback = _callback_from_answers(state)
+    if state.callback:
+        call.callback_topic = state.callback.get("topic")
+        call.callback_reason = state.callback.get("reason")
+        call.callback_urgency = state.callback.get("urgency")
+    _save_state(call, state)
+
     call.status = status
     call.ended_at = _now()
-    call.summary = call_script.build_summary(state, ctx)
+    call.summary = _summary_with_handover(call, call_script.build_summary(state, ctx))
     call.needs_follow_up = call_script.needs_follow_up(state)
 
     if state.answered_by != "wrong_person":
         check_in = _record_check_in(db, call, state)
         if check_in is not None:
             call.check_in_id = check_in.id
+            # A live hand-over that is still ringing gets its
+            # call-back need only if the navigator misses it.
+            if call.callback_topic and call.transfer_status != "dialing":
+                _raise_callback_signal(db, call, check_in)
+            evaluate_and_snapshot_patient(db, patient_id=call.patient_id)
 
     write_audit_log(
         db,
@@ -330,6 +421,9 @@ def finish(db: Session, call: ReminderCall, *, status: ReminderCallStatus) -> No
             "answered_by": state.answered_by,
             "needs_follow_up": call.needs_follow_up,
             "safety_flag": call.safety_flag,
+            "mode": call.mode,
+            "transfer_status": call.transfer_status,
+            "callback_urgency": call.callback_urgency,
         },
     )
 
@@ -407,9 +501,10 @@ def _record_check_in(
         ),
         medication_access_issue=a.get("medication") == "yes",
         financial_concern=a.get("cost") == "yes",
+        # A request for a call back becomes its own signal
+        # (see _raise_callback_signal), with topic and urgency.
         requested_help=bool(
             state.safety_flag
-            or a.get("callback") == "yes"
             or a.get("attendance") in ("no", "unsure")
         ),
         free_text=f"Reminder call: {call.summary}"[:3000],
@@ -421,8 +516,165 @@ def _record_check_in(
     db.flush()
 
     generate_signals_from_check_in(db, check_in=check_in)
-    evaluate_and_snapshot_patient(db, patient_id=call.patient_id)
     return check_in
+
+
+# ---------------------------------------------------------
+# Hand-over to a person
+# ---------------------------------------------------------
+
+TOPIC_LABELS = {
+    "symptoms": "symptoms",
+    "medicine": "medicines",
+    "ride": "a ride",
+    "cost_insurance": "cost or insurance",
+    "appointment": "the appointment",
+    "other": "a question",
+}
+
+TOPIC_CATEGORY = {
+    "symptoms": NavigationSignalCategory.PATIENT_REPORTED,
+    "medicine": NavigationSignalCategory.ACCESS,
+    "ride": NavigationSignalCategory.ACCESS,
+    "cost_insurance": NavigationSignalCategory.FINANCIAL,
+    "appointment": NavigationSignalCategory.CARE_COORDINATION,
+    "other": NavigationSignalCategory.PATIENT_REPORTED,
+}
+
+
+@dataclass
+class AssignedNavigator:
+    user_id: uuid.UUID
+    first_name: str
+    last_name: str
+    phone: str | None
+
+
+def get_assigned_navigator(db: Session, patient_id: uuid.UUID) -> AssignedNavigator | None:
+    row = db.execute(
+        select(NavigatorProfile)
+        .join(
+            NavigatorPatientAssignment,
+            NavigatorPatientAssignment.navigator_user_id == NavigatorProfile.user_id,
+        )
+        .where(NavigatorPatientAssignment.patient_id == patient_id)
+        .order_by(NavigatorPatientAssignment.created_at)
+        .limit(1)
+    ).scalar_one_or_none()
+
+    if row is None:
+        return None
+    return AssignedNavigator(
+        user_id=row.user_id,
+        first_name=row.first_name,
+        last_name=row.last_name,
+        phone=row.phone,
+    )
+
+
+def clinic_is_open(now: datetime | None = None) -> bool:
+    local = (now or _now()).astimezone(ZoneInfo(settings.clinic_timezone))
+    return local.weekday() < 5 and settings.clinic_hours_start <= local.hour < settings.clinic_hours_end
+
+
+def navigator_info(db: Session, call: ReminderCall) -> call_agent.NavigatorInfo | None:
+    navigator = get_assigned_navigator(db, call.patient_id)
+    if navigator is None:
+        return None
+    return call_agent.NavigatorInfo(
+        first_name=navigator.first_name,
+        phone=navigator.phone,
+        can_transfer=bool(navigator.phone) and clinic_is_open(),
+    )
+
+
+def _callback_from_answers(state: call_script.CallState) -> dict:
+    """The scripted caller only asks yes/no, so guess the topic."""
+
+    a = state.answers
+    severity = a.get("symptom_severity")
+    if isinstance(severity, int) and severity >= 7:
+        topic, urgency = "symptoms", "today"
+    elif a.get("transportation") in ("no", "unsure"):
+        topic, urgency = "ride", "today"
+    elif a.get("medication") == "yes":
+        topic, urgency = "medicine", "today"
+    elif a.get("cost") == "yes":
+        topic, urgency = "cost_insurance", "routine"
+    elif a.get("attendance") in ("no", "unsure"):
+        topic, urgency = "appointment", "today"
+    else:
+        topic, urgency = "other", "routine"
+    return {
+        "topic": topic,
+        "urgency": urgency,
+        "reason": "Asked for a call back at the end of the reminder call.",
+    }
+
+
+def _summary_with_handover(call: ReminderCall, summary: str) -> str:
+    extra = []
+    if call.callback_topic:
+        summary = summary.replace(" Asked for a call back.", "")
+        extra.append(
+            f"Asked for a person to help with {TOPIC_LABELS.get(call.callback_topic, 'a question')}"
+            f" ({call.callback_urgency})."
+        )
+    if call.transfer_status == "dialing":
+        extra.append("Was being connected to their navigator.")
+    elif call.transfer_status == "simulated":
+        extra.append("Would have been connected to their navigator (practice call).")
+    return " ".join([summary, *extra])
+
+
+def _raise_callback_signal(db: Session, call: ReminderCall, check_in: CheckIn) -> None:
+    """
+    Record the request as a navigation signal. The rules in
+    context_engine.evaluate_callback_need turn it into a need
+    with a due time, so the AI never sets priority itself.
+    """
+
+    urgency = call.callback_urgency if call.callback_urgency in ("urgent", "today", "routine") else "routine"
+    create_signal_if_missing(
+        db,
+        patient_id=call.patient_id,
+        category=TOPIC_CATEGORY.get(call.callback_topic or "other", NavigationSignalCategory.PATIENT_REPORTED),
+        signal_type=f"callback_{urgency}",
+        title=f"Call back requested about {TOPIC_LABELS.get(call.callback_topic or 'other')}",
+        description=call.callback_reason,
+        source_type=NavigationSignalSourceType.CHECK_IN,
+        source_reference=str(check_in.id),
+        observed_at=_now(),
+    )
+
+
+def record_transfer_result(db: Session, call: ReminderCall, *, connected: bool) -> None:
+    """Twilio tells us whether the navigator picked up."""
+
+    call.transfer_status = "connected" if connected else "no_answer"
+    note = (
+        "Was connected to their navigator."
+        if connected
+        else "Their navigator did not answer; a call back was booked."
+    )
+    call.summary = (call.summary or "").replace("Was being connected to their navigator.", note)
+
+    if not connected and call.check_in_id:
+        check_in = db.get(CheckIn, call.check_in_id)
+        if check_in is not None:
+            _raise_callback_signal(db, call, check_in)
+            evaluate_and_snapshot_patient(db, patient_id=call.patient_id)
+
+    write_audit_log(
+        db,
+        organization_id=call.organization_id,
+        actor_user_id=None,
+        patient_id=call.patient_id,
+        action="REMINDER_CALL_TRANSFER_RESULT",
+        resource_type="reminder_call",
+        resource_id=str(call.id),
+        metadata_json={"connected": connected},
+    )
 
 
 # ---------------------------------------------------------

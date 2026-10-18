@@ -90,6 +90,19 @@ class Settings(BaseSettings):
     reminder_call_poll_minutes: int = 30
     reminder_call_cron_secret: str | None = None
 
+    # "scripted" = fixed questions, "agent" = Gemini agent.
+    # The navigator can pick either for each call; this is
+    # the default and what automatic calls use.
+    reminder_call_mode: str = "scripted"
+    # Leave empty to use GEMINI_MODEL.
+    reminder_call_agent_model: str | None = None
+
+    # A caller who asks for a person is put through to their
+    # navigator only during these hours (clinic time zone,
+    # Monday to Friday). Otherwise a call back is booked.
+    clinic_hours_start: int = 9
+    clinic_hours_end: int = 17
+
     # Public URL of this API. Twilio must be able
     # to reach it (for local work use ngrok).
     public_api_url: str = "http://localhost:8000"

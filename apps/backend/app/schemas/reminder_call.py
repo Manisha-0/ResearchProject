@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -32,6 +32,11 @@ class ReminderCallSummary(BaseModel):
     started_at: datetime | None
     ended_at: datetime | None
     created_at: datetime
+    mode: str = "scripted"
+    transfer_status: str | None = None
+    callback_topic: str | None = None
+    callback_urgency: str | None = None
+    callback_reason: str | None = None
 
 
 class ReminderCallDetail(ReminderCallSummary):
@@ -40,6 +45,7 @@ class ReminderCallDetail(ReminderCallSummary):
     answers: dict[str, Any]
     check_in_id: uuid.UUID | None
     error_message: str | None
+    used_fallback: bool = False
 
 
 class UpcomingCallItem(BaseModel):
@@ -62,6 +68,8 @@ class UpcomingCallItem(BaseModel):
 class UpcomingCallsResponse(BaseModel):
     phone_calls_enabled: bool
     auto_dial_enabled: bool
+    agent_available: bool
+    default_mode: str
     window_hours: int
     items: list[UpcomingCallItem]
 
@@ -69,6 +77,7 @@ class UpcomingCallsResponse(BaseModel):
 class StartReminderCallRequest(BaseModel):
     appointment_id: uuid.UUID
     channel: ReminderCallChannel = ReminderCallChannel.SIMULATED
+    mode: Literal["scripted", "agent"] | None = None
 
 
 class ReminderCallReplyRequest(BaseModel):

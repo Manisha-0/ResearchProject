@@ -17,6 +17,7 @@ import { endCall, replyToCall, startCall } from "@/lib/reminder-call-api";
 
 import type {
   ReminderCallDetail,
+  ReminderCallMode,
   ReminderCallTurn,
   UpcomingCallItem,
 } from "@/types/reminder-call";
@@ -60,9 +61,11 @@ function createRecognition(): Recognition | null {
 
 export function CallSimulator({
   item,
+  mode = "scripted",
   onClose,
 }: {
   item: UpcomingCallItem;
+  mode?: ReminderCallMode;
   onClose: (changed: boolean) => void;
 }) {
   const [call, setCall] = useState<ReminderCallDetail | null>(null);
@@ -159,13 +162,13 @@ export function CallSimulator({
     recognitionRef.current = recognition;
     setCanListen(Boolean(recognition));
 
-    startCall(item.appointment_id, "simulated")
+    startCall(item.appointment_id, "simulated", mode)
       .then(applyTurn)
       .catch((caught) =>
         setError(caught instanceof ApiError ? caught.message : "The call could not start."),
       )
       .finally(() => setBusy(false));
-  }, [applyTurn, item.appointment_id]);
+  }, [applyTurn, item.appointment_id, mode]);
 
   // Wire speech results to the latest send().
   useEffect(() => {
@@ -218,8 +221,10 @@ export function CallSimulator({
               Practice call with {name} {item.patient_last_name}
             </h2>
             <p className="text-sm text-ink-soft">
-              Runs the same script as a phone call. Answers are saved to the
-              patient record.
+              {mode === "agent"
+                ? "AI agent caller. Talk to it the way a patient would."
+                : "Fixed questions, the same as a phone call."}{" "}
+              Answers are saved to the patient record.
             </p>
           </div>
 
@@ -270,7 +275,19 @@ export function CallSimulator({
           {!done ? (
             <>
               <div className="flex flex-wrap gap-2">
-                {expects === "number"
+                {expects === "agent" ? (
+                  <>
+                    <QuickAnswer disabled={busy} onClick={() => void send("yes")}>Yes</QuickAnswer>
+                    <QuickAnswer disabled={busy} onClick={() => void send("no")}>No</QuickAnswer>
+                    <QuickAnswer disabled={busy} onClick={() => void send("I'm not sure")}>Not sure</QuickAnswer>
+                    <QuickAnswer disabled={busy} onClick={() => void send("this is her daughter")}>
+                      A family member
+                    </QuickAnswer>
+                    <QuickAnswer disabled={busy} onClick={() => void send("Can I talk to a real person?")}>
+                      Ask for a person
+                    </QuickAnswer>
+                  </>
+                ) : expects === "number"
                   ? Array.from({ length: 11 }, (_, n) => (
                       <QuickAnswer key={n} disabled={busy} onClick={() => void send(String(n))}>
                         {n}
