@@ -9,6 +9,8 @@ import {
 
 import { useState } from "react";
 
+import { ChoiceQuestion } from "@/components/ui/ChoiceQuestion";
+
 import { submitCaregiverCheckIn } from "@/lib/caregiver-api";
 
 import type { CaregiverCheckInResponse } from "@/types/caregiver";
@@ -125,7 +127,7 @@ export function CaregiverCheckInForm({
             </p>
 
             {requestedHelp && (
-              <p className="mt-3 text-sm font-medium text-navy">
+              <p className="mt-3 text-sm font-medium text-pine">
                 The request for navigator support was included.
               </p>
             )}
@@ -139,7 +141,7 @@ export function CaregiverCheckInForm({
             <button
               type="button"
               onClick={resetForm}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg border border-priority-low/25 bg-white px-3.5 py-2 text-xs font-semibold text-navy transition hover:border-navy/30"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg border border-priority-low/25 bg-white px-3.5 py-2 text-xs font-semibold text-pine transition hover:border-pine/30"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Submit another update
@@ -153,11 +155,11 @@ export function CaregiverCheckInForm({
   return (
     <section className="mt-6 rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+        <p className="text-xs font-semibold text-ochre">
           Check in for {patientFirstName}
         </p>
 
-        <h2 className="mt-2 text-xl font-semibold text-navy-deep">
+        <h2 className="mt-2 text-xl font-semibold text-pine-deep">
           Share an update on {patientFirstName}
           &apos;s behalf
         </h2>
@@ -167,7 +169,7 @@ export function CaregiverCheckInForm({
           team when {patientFirstName} has given you proxy check-in access.
         </p>
 
-        <div className="mt-4 rounded-xl bg-navy-tint p-4">
+        <div className="mt-4 rounded-xl bg-pine-tint p-4">
           <p className="text-xs leading-5 text-ink-soft">
             Report what you know about {patientFirstName}
             &apos;s current situation. This does not give you access to{" "}
@@ -274,9 +276,9 @@ export function CaregiverCheckInForm({
               outline-none
               transition
               placeholder:text-ink-soft/50
-              focus:border-navy
+              focus:border-pine
               focus:ring-2
-              focus:ring-navy/10
+              focus:ring-pine/10
             "
           />
 
@@ -306,17 +308,17 @@ export function CaregiverCheckInForm({
           justify-center
           gap-2
           rounded-xl
-          bg-navy
+          bg-pine
           px-5
           py-3.5
           text-sm
           font-semibold
           text-white
           transition
-          hover:bg-navy-deep
+          hover:bg-pine-deep
           focus:outline-none
           focus-visible:ring-2
-          focus-visible:ring-gold
+          focus-visible:ring-sun
           focus-visible:ring-offset-2
           disabled:cursor-not-allowed
           disabled:opacity-60
@@ -346,37 +348,8 @@ type QuestionProps = {
   options: QuestionOption[];
 };
 
-function Question({ title, options }: QuestionProps) {
-  return (
-    <div>
-      <p className="text-sm font-semibold text-ink">{title}</p>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {options.map((option) => (
-          <button
-            key={option.label}
-            type="button"
-            onClick={option.onClick}
-            className={[
-              "rounded-full border " +
-                "px-4 py-2.5 " +
-                "text-sm font-medium " +
-                "transition",
-              option.active
-                ? "border-navy " + "bg-navy " + "text-white"
-                : "border-border " +
-                  "bg-surface-soft " +
-                  "text-ink-soft " +
-                  "hover:border-navy/30 " +
-                  "hover:text-navy",
-            ].join(" ")}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function Question(props: QuestionProps) {
+  return <ChoiceQuestion {...props} />;
 }
 
 function YesNoQuestion({

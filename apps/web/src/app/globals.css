@@ -1,36 +1,51 @@
 @import "tailwindcss";
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+
+/*
+ * Compass visual system
+ *
+ * Built for patients who may be older, have low vision,
+ * or are not used to apps. Atkinson Hyperlegible Next was
+ * designed by the Braille Institute for exactly that reader,
+ * and it is bundled with the app so the interface works
+ * without an internet connection to a font service.
+ *
+ * Color has one job each:
+ *   pine    actions, links, focus
+ *   sun     the appointment card (the one bright thing)
+ *   ochre   small headings that need warmth but must stay readable
+ *   red / amber / green   navigation attention only
+ */
 
 @theme {
-  /* Compass / Ochsner-inspired brand */
-  --color-navy: #142d50;
-  --color-navy-deep: #0e203a;
-  --color-navy-soft: #28476d;
-  --color-navy-tint: #e7ecf3;
+  --color-pine: #17504f;
+  --color-pine-deep: #0f3736;
+  --color-pine-soft: #2f6e6c;
+  --color-pine-tint: #e2eeec;
 
-  --color-gold: #f2a900;
-  --color-gold-soft: #f8c65c;
-  --color-gold-tint: #fdf1d9;
+  --color-sun: #f7d774;
+  --color-sun-soft: #fbe7a6;
+  --color-sun-tint: #fdf5d8;
+  --color-ochre: #7a5a0e;
 
-  /* Navigation priority colors */
-  --color-priority-high: #b0483c;
-  --color-priority-high-tint: #f5e4e1;
+  --color-priority-high: #a6402d;
+  --color-priority-high-tint: #f8e5e0;
+  --color-priority-medium: #9a6410;
+  --color-priority-medium-tint: #fbf0da;
+  --color-priority-low: #2f7a4f;
+  --color-priority-low-tint: #e3f1e8;
 
-  --color-priority-medium: #c98a2e;
-  --color-priority-medium-tint: #faeedc;
-
-  --color-priority-low: #3f8f5f;
-  --color-priority-low-tint: #e4f1e9;
-
-  /* Neutral UI */
-  --color-ink: #16232b;
-  --color-ink-soft: #4e5b62;
+  --color-ink: #1c2a29;
+  --color-ink-soft: #4b5b59;
   --color-surface: #ffffff;
-  --color-surface-soft: #f7f9fb;
-  --color-border: #dce3ea;
+  --color-surface-soft: #f4f7f6;
+  --color-border: #d6e0de;
 
-  /* Typography */
-  --font-display: Georgia, "Times New Roman", serif;
-  --font-body: Arial, Helvetica, sans-serif;
+  --font-display: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next Variable", system-ui, sans-serif;
+
+  --radius-card: 14px;
 }
 
 :root {
@@ -40,6 +55,8 @@
 
 html {
   background: var(--color-surface-soft);
+  /* Slightly larger than the browser default. */
+  font-size: 106.25%;
 }
 
 body {
@@ -48,6 +65,18 @@ body {
   background: var(--color-surface-soft);
   color: var(--color-ink);
   font-family: var(--font-body);
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 button,
@@ -63,7 +92,63 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+:focus-visible {
+  outline: 3px solid var(--color-pine);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 ::selection {
-  background: var(--color-gold-tint);
-  color: var(--color-navy-deep);
+  background: var(--color-sun-soft);
+  color: var(--color-ink);
+}
+
+/*
+ * The appointment card.
+ * Looks like the paper reminder card a clinic front desk
+ * hands you: a punched edge on the left and a dashed tear
+ * line before the stub.
+ */
+.appointment-card {
+  position: relative;
+  background: var(--color-sun);
+  color: var(--color-ink);
+  border-radius: var(--radius-card);
+  padding-left: 2.25rem;
+}
+
+.appointment-card::before {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  top: 1.25rem;
+  bottom: 1.25rem;
+  width: 0.55rem;
+  background-image: radial-gradient(
+    circle,
+    var(--color-surface-soft) 0.22rem,
+    transparent 0.24rem
+  );
+  background-size: 0.55rem 1.35rem;
+  background-repeat: repeat-y;
+}
+
+.appointment-card-stub {
+  border-top: 2px dashed rgb(28 42 41 / 0.28);
+}
+
+@media (min-width: 640px) {
+  .appointment-card-stub {
+    border-top: 0;
+    border-left: 2px dashed rgb(28 42 41 / 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -74,6 +74,31 @@ class Settings(BaseSettings):
         100_000
     )
 
+    # Appointment reminder calls
+    #
+    # The call agent phones patients who have an
+    # appointment in the next 48 hours.
+    #
+    # Without Twilio credentials only the browser
+    # call simulator is available.
+    clinic_timezone: str = "America/Chicago"
+    reminder_call_window_hours: int = 48
+    reminder_call_max_attempts: int = 2
+    reminder_call_retry_minutes: int = 120
+    reminder_call_use_ai: bool = True
+    reminder_call_auto_dial: bool = False
+    reminder_call_poll_minutes: int = 30
+    reminder_call_cron_secret: str | None = None
+
+    # Public URL of this API. Twilio must be able
+    # to reach it (for local work use ngrok).
+    public_api_url: str = "http://localhost:8000"
+
+    twilio_account_sid: str | None = None
+    twilio_auth_token: str | None = None
+    twilio_from_number: str | None = None
+    twilio_voice: str = "Polly.Joanna"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

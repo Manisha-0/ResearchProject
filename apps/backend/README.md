@@ -1047,3 +1047,138 @@ It does not make clinical decisions.
 * Navigation tasks represent navigator actions.
 * Completed tasks remain stored as resolution history.
 * Audit logs are separate from navigator-facing resolution history.
+
+---
+
+# Appointment reminder calls
+
+Compass calls every patient who has a scheduled appointment in the next
+48 hours. The call is meant for patients who find apps and websites hard
+to use. A family member or caregiver can answer for them.
+
+## What the call asks
+
+1. Who is speaking (the patient, or someone helping them). No appointment
+   details are shared until this is confirmed.
+2. A reminder of the appointment (what, when, where, with whom), then:
+   can you make it?
+3. Do you have a ride?
+4. Any trouble getting medicines?
+5. How are you feeling, from 0 to 10?
+6. Any worries about cost or insurance?
+7. Anything else the care team should know?
+8. Would you like a navigator to call back?
+
+The caller can answer by voice or with the keypad (1 = yes, 2 = no,
+numbers for the 0-10 scale). Unclear answers are asked once more, then
+skipped. If the caller mentions an emergency (for example chest pain or
+trouble breathing) or self-harm, the call stops, they are told to call
+911 (and 988 for self-harm), and the call is flagged as urgent.
+
+## How it fits the existing design
+
+```text
+Twilio phone call  ─┐
+                    ├─► call_script.py (fixed questions)
+Browser simulator  ─┘        │
+                             │  answer unclear?  ──► Gemini picks one allowed value
+                             ▼
+                    reminder_calls table (transcript + answers + summary)
+                             │
+                             ▼
+                    CheckIn (source = voice_call)
+                             │
+                             ▼
+              existing signal_service + context_engine rules
+                             │
+                             ▼
+                    Navigation needs / attention status
+```
+
+AI never decides priority. Gemini is only used to understand an answer
+that simple word matching could not, and it may only return a value from
+a short fixed list. Everything after that is the same rules engine used
+for app check-ins.
+
+Files:
+
+| File | Purpose |
+| --- | --- |
+| `app/services/call_script.py` | The conversation. No database code, fully unit tested. |
+| `app/services/call_interpreter.py` | Gemini fallback for unclear answers. |
+| `app/services/reminder_call_service.py` | Saves state and transcript, creates the check-in, finds who is due. |
+| `app/services/twilio_service.py` | Starts calls, builds TwiML, checks Twilio signatures. |
+| `app/routers/reminder_calls.py` | Navigator API, Twilio webhooks, cron endpoint. |
+| `alembic/versions/3b7e21c4d9a0_add_reminder_calls.py` | New table and the `voice_call` check-in source. |
+| `tests/test_call_script.py` | 32 tests covering answers, caregiver calls, wrong person, silence, emergencies. |
+
+## Run the migration
+
+```bash
+alembic upgrade head
+```
+
+## Try it without a phone (practice calls)
+
+Nothing extra is needed. Sign in as a navigator, open **Reminder calls**,
+and press **Practice call** on any visit. Chrome or Edge will speak the
+questions out loud and listen through the microphone; you can also type
+or tap answers. Practice calls are saved like real calls.
+
+## Real phone calls with Twilio
+
+1. Create a Twilio account and buy a voice-capable phone number. On a
+   trial account you can only call numbers you have verified in Twilio.
+2. The backend must be reachable from the internet. Locally:
+
+   ```bash
+   ngrok http 8000
+   ```
+
+3. Add to `.env`:
+
+   ```text
+   PUBLIC_API_URL=https://<your-ngrok-or-render-url>
+   TWILIO_ACCOUNT_SID=AC...
+   TWILIO_AUTH_TOKEN=...
+   TWILIO_FROM_NUMBER=+1...
+   ```
+
+4. Restart the API. The **Call** button now appears on the Reminder calls
+   page. Patient phone numbers must be in E.164 format, e.g. `+19855550117`.
+
+## Calling automatically
+
+Pick one:
+
+- `REMINDER_CALL_AUTO_DIAL=true` runs a loop inside the API every
+  `REMINDER_CALL_POLL_MINUTES` (default 30). Good for an always-on server.
+- On hosting that sleeps (free tiers), call the endpoint from any cron job:
+
+  ```bash
+  curl -X POST https://<api>/reminder-calls/run-due \
+       -H "X-Cron-Secret: $REMINDER_CALL_CRON_SECRET"
+  ```
+
+A patient who does not answer is tried again after
+`REMINDER_CALL_RETRY_MINUTES` (default 120), up to
+`REMINDER_CALL_MAX_ATTEMPTS` (default 2).
+
+## Run the tests
+
+```bash
+pip install pytest
+python -m pytest tests -q
+```
+
+## Settings
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `CLINIC_TIMEZONE` | `America/Chicago` | Used when the call reads out the appointment time. |
+| `REMINDER_CALL_WINDOW_HOURS` | `48` | How far ahead to look for appointments. |
+| `REMINDER_CALL_USE_AI` | `true` | Use Gemini for unclear answers. `false` = word matching only. |
+| `REMINDER_CALL_AUTO_DIAL` | `false` | Place calls automatically from inside the API. |
+| `REMINDER_CALL_CRON_SECRET` | none | Secret for `/reminder-calls/run-due`. |
+| `PUBLIC_API_URL` | `http://localhost:8000` | Public URL Twilio calls back to. |
+| `TWILIO_*` | none | Twilio credentials and caller number. |

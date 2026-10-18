@@ -21,7 +21,8 @@ export type AppointmentStatus =
 
 export type CheckInSource =
   | "patient"
-  | "caregiver";
+  | "caregiver"
+  | "voice_call";
 
 export type PatientAppointment = {
   id: string;

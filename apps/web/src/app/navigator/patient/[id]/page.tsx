@@ -25,6 +25,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { PatientCallHistory } from "@/components/calls/PatientCallHistory";
 import { AppHeader } from "@/components/app/AppHeader";
 
 import { AddJourneyItemDialog } from "@/components/navigator/AddJourneyItemDialog";
@@ -292,7 +293,7 @@ export default function PatientDetailPage() {
       <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 sm:py-10">
         <Link
           href="/navigator"
-          className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft transition hover:text-navy"
+          className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft transition hover:text-pine"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to dashboard
@@ -337,6 +338,11 @@ export default function PatientDetailPage() {
                 />
 
                 <PatientDocuments patientId={patient.profile.patient_id} />
+
+                <PatientCallHistory
+                  patientId={patient.profile.patient_id}
+                  patientFirstName={patient.profile.first_name}
+                />
 
                 <RecentCheckIns patient={patient} />
 
@@ -417,16 +423,12 @@ function PatientHeader({ patient }: { patient: Patient360Response }) {
     <section className="mt-6 rounded-2xl border border-border bg-white p-5 sm:p-7">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-navy-tint text-lg font-bold text-navy">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-pine-tint text-lg font-bold text-pine">
             {getInitials(profile.first_name, profile.last_name)}
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Patient 360
-            </p>
-
-            <h1 className="mt-1 font-display text-3xl font-bold text-navy-deep">
+            <h1 className="mt-1 font-display text-3xl font-bold text-pine-deep">
               {profile.first_name} {profile.last_name}
             </h1>
 
@@ -464,10 +466,6 @@ function AttentionOverview({ patient }: { patient: Patient360Response }) {
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Current Attention
-          </p>
-
           <h2 className="mt-1 text-lg font-semibold text-ink">
             What requires navigation review
           </h2>
@@ -480,12 +478,12 @@ function AttentionOverview({ patient }: { patient: Patient360Response }) {
         {patient.attention.explanation}
       </p>
 
-      <div className="mt-5 rounded-xl bg-navy-tint p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-navy">
+      <div className="mt-5 rounded-xl bg-pine-tint p-4">
+        <p className="text-xs font-semibold text-pine">
           Open navigation needs
         </p>
 
-        <p className="mt-2 text-2xl font-bold text-navy-deep">
+        <p className="mt-2 text-2xl font-bold text-pine-deep">
           {patient.attention.open_need_count}
         </p>
       </div>
@@ -513,10 +511,6 @@ function NavigationNeeds({
 
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-        Navigation Needs
-      </p>
-
       <h2 className="mt-1 text-lg font-semibold text-ink">
         Why intervention may be needed
       </h2>
@@ -561,7 +555,7 @@ function NavigationNeeds({
 
                     {need.recommended_action && (
                       <div className="mt-3 rounded-lg bg-white p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-navy">
+                        <p className="text-xs font-semibold text-pine">
                           Recommended action
                         </p>
 
@@ -580,7 +574,7 @@ function NavigationNeeds({
                   </div>
 
                   {activeTask ? (
-                    <div className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-navy">
+                    <div className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-pine">
                       Task {formatStatus(activeTask.status)}
                     </div>
                   ) : (
@@ -588,7 +582,7 @@ function NavigationNeeds({
                       type="button"
                       disabled={creatingNeedId === need.need_id}
                       onClick={() => void onCreateTask(need)}
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {creatingNeedId === need.need_id ? (
                         <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -627,13 +621,9 @@ function CareJourney({
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
-          <Flag className="h-5 w-5 text-navy" />
+          <Flag className="h-5 w-5 text-pine" />
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Care Journey
-            </p>
-
             <h2 className="mt-1 font-semibold text-ink">
               Planned care and milestones
             </h2>
@@ -643,7 +633,7 @@ function CareJourney({
         <button
           type="button"
           onClick={onAdd}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-navy-deep"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-pine px-3 py-2 text-xs font-semibold text-white transition hover:bg-pine-deep"
         >
           <Plus className="h-3.5 w-3.5" />
           Add item
@@ -666,7 +656,7 @@ function CareJourney({
             <button
               type="button"
               onClick={onAdd}
-              className="mt-3 text-sm font-semibold text-navy transition hover:text-navy-deep"
+              className="mt-3 text-sm font-semibold text-pine transition hover:text-pine-deep"
             >
               Add the first journey item
             </button>
@@ -680,7 +670,7 @@ function CareJourney({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-navy">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-pine">
                       {formatStatus(item.item_type)}
                     </span>
 
@@ -732,13 +722,9 @@ function UpcomingAppointments({
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-navy" />
+          <CalendarDays className="h-5 w-5 text-pine" />
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Upcoming
-            </p>
-
             <h2 className="mt-1 font-semibold text-ink">Appointments</h2>
           </div>
         </div>
@@ -746,7 +732,7 @@ function UpcomingAppointments({
         <button
           type="button"
           onClick={onSchedule}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-navy-deep"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-pine px-3 py-2 text-xs font-semibold text-white transition hover:bg-pine-deep"
         >
           <Plus className="h-3.5 w-3.5" />
           Schedule
@@ -761,7 +747,7 @@ function UpcomingAppointments({
             <button
               type="button"
               onClick={onSchedule}
-              className="mt-3 text-sm font-semibold text-navy transition hover:text-navy-deep"
+              className="mt-3 text-sm font-semibold text-pine transition hover:text-pine-deep"
             >
               Schedule the first appointment
             </button>
@@ -816,13 +802,9 @@ function ActiveTasks({
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <ClipboardCheck className="h-5 w-5 text-navy" />
+        <ClipboardCheck className="h-5 w-5 text-pine" />
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Navigator Work
-          </p>
-
           <h2 className="mt-1 font-semibold text-ink">Active tasks</h2>
         </div>
       </div>
@@ -866,7 +848,7 @@ function ActiveTasks({
                       type="button"
                       disabled={isUpdating}
                       onClick={() => void onStart(task)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-pine transition hover:bg-pine-tint disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isUpdating ? (
                         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -883,7 +865,7 @@ function ActiveTasks({
                       type="button"
                       disabled={isUpdating}
                       onClick={() => onComplete(task)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center gap-2 rounded-lg bg-pine px-3 py-2 text-xs font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Complete
@@ -910,10 +892,6 @@ function RecentResolutions({
         <CheckCircle2 className="h-5 w-5 text-priority-low" />
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Resolution History
-          </p>
-
           <h2 className="mt-1 font-semibold text-ink">
             Recently completed work
           </h2>
@@ -940,7 +918,7 @@ function RecentResolutions({
               </p>
 
               <div className="mt-3 rounded-lg bg-white p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                <p className="text-[10px] font-semibold text-ink-soft">
                   Resolution note
                 </p>
 
@@ -985,14 +963,10 @@ function CompleteTaskDialog({
   onSubmit: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/55 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/55 px-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-2xl border border-border bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Complete task
-            </p>
-
             <h2 className="mt-1 text-lg font-semibold text-ink">
               {task.title}
             </h2>
@@ -1030,7 +1004,7 @@ function CompleteTaskDialog({
             rows={5}
             maxLength={3000}
             placeholder="Example: Spoke with patient and confirmed transportation through caregiver for the upcoming appointment."
-            className="mt-2 w-full resize-none rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/60 focus:border-navy focus:bg-white disabled:opacity-60"
+            className="mt-2 w-full resize-none rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/60 focus:border-pine focus:bg-white disabled:opacity-60"
           />
 
           {error && (
@@ -1053,7 +1027,7 @@ function CompleteTaskDialog({
               type="button"
               disabled={isSubmitting}
               onClick={onSubmit}
-              className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1080,13 +1054,9 @@ function RecentCheckIns({ patient }: { patient: Patient360Response }) {
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <UserRound className="h-5 w-5 text-navy" />
+        <UserRound className="h-5 w-5 text-pine" />
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Recent Check-Ins
-          </p>
-
           <h2 className="mt-1 font-semibold text-ink">
             Patient and caregiver signals
           </h2>
@@ -1136,7 +1106,9 @@ function FullCheckIn({ checkIn }: { checkIn: Patient360CheckIn }) {
     <div className="rounded-xl bg-surface-soft p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold capitalize text-ink">
-          {checkIn.source} check-in
+          {checkIn.source === "voice_call"
+            ? "Reminder call"
+            : `${checkIn.source} check-in`}
         </p>
 
         <p className="text-xs text-ink-soft">
@@ -1183,7 +1155,7 @@ function FullCheckIn({ checkIn }: { checkIn: Patient360CheckIn }) {
 
       {checkIn.free_text && (
         <div className="mt-4 rounded-lg bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+          <p className="text-xs font-semibold text-ink-soft">
             Note
           </p>
 
@@ -1198,13 +1170,9 @@ function Caregivers({ patient }: { patient: Patient360Response }) {
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <HeartHandshake className="h-5 w-5 text-navy" />
+        <HeartHandshake className="h-5 w-5 text-pine" />
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Caregiver Access
-          </p>
-
           <h2 className="mt-1 font-semibold text-ink">Authorized support</h2>
         </div>
       </div>
@@ -1252,9 +1220,9 @@ function JourneyStatusBadge({
   status: JourneyTimelineItem["status"];
 }) {
   const styles = {
-    upcoming: "bg-gold-tint text-navy-deep",
+    upcoming: "bg-sun-tint text-pine-deep",
 
-    in_progress: "bg-navy-tint text-navy",
+    in_progress: "bg-pine-tint text-pine",
 
     completed: "bg-priority-low-tint text-priority-low",
 
@@ -1274,7 +1242,7 @@ function TaskStatusBadge({ status }: { status: NavigationTaskStatus }) {
   const styles: Record<NavigationTaskStatus, string> = {
     open: "bg-white text-ink-soft",
 
-    in_progress: "bg-gold-tint text-navy-deep",
+    in_progress: "bg-sun-tint text-pine-deep",
 
     completed: "bg-priority-low-tint text-priority-low",
 
@@ -1303,7 +1271,7 @@ function InfoItem({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="mt-0.5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-navy">
+      <div className="mt-0.5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-pine">
         {icon}
       </div>
 
@@ -1322,7 +1290,7 @@ function AttentionBadge({ status }: { status: AttentionStatus }) {
   const styles: Record<AttentionStatus, string> = {
     needs_attention: "bg-priority-high-tint text-priority-high",
 
-    follow_up: "bg-gold-tint text-navy-deep",
+    follow_up: "bg-sun-tint text-pine-deep",
 
     on_track: "bg-priority-low-tint text-priority-low",
   };
@@ -1355,7 +1323,7 @@ function CheckInValue({
 
 function SignalChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-gold-tint px-2.5 py-1 text-xs font-semibold text-navy-deep">
+    <span className="rounded-full bg-sun-tint px-2.5 py-1 text-xs font-semibold text-pine-deep">
       {children}
     </span>
   );
@@ -1365,7 +1333,7 @@ function LoadingState() {
   return (
     <div className="mt-10 flex min-h-64 items-center justify-center rounded-2xl border border-border bg-white">
       <div className="text-center">
-        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-navy" />
+        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-pine" />
 
         <p className="mt-3 text-sm text-ink-soft">Loading Patient 360...</p>
       </div>
@@ -1394,7 +1362,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="mt-4 rounded-lg bg-pine px-4 py-2 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             Try again
           </button>

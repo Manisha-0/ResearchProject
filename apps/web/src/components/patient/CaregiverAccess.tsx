@@ -148,18 +148,14 @@ export function CaregiverAccess() {
 
   return (
     <>
-      <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+      <section className="border-t border-border pt-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Caregiver Access
-            </p>
-
-            <h2 className="mt-1 text-lg font-semibold text-navy-deep">
+            <h2 className="text-[1.5rem] font-bold leading-tight text-pine-deep">
               People helping with my care
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
+            <p className="mt-2 text-base leading-6 text-ink-soft">
               Choose who can help coordinate your care and exactly what they are
               allowed to see or do.
             </p>
@@ -168,7 +164,7 @@ export function CaregiverAccess() {
           <button
             type="button"
             onClick={() => setShowAdd(true)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-navy px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-pine px-3.5 py-2.5 text-base font-semibold text-white transition hover:bg-pine-deep"
           >
             <Plus className="h-4 w-4" />
             Add caregiver
@@ -179,20 +175,20 @@ export function CaregiverAccess() {
           <div className="mt-4 flex items-start gap-2 rounded-xl bg-priority-high-tint p-4">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-priority-high" />
 
-            <p className="text-sm text-priority-high">{error}</p>
+            <p className="text-base text-priority-high">{error}</p>
           </div>
         )}
 
         {isLoading && (
-          <div className="mt-5 flex items-center gap-2 rounded-xl bg-surface-soft p-4 text-sm text-ink-soft">
-            <LoaderCircle className="h-4 w-4 animate-spin text-navy" />
+          <div className="mt-5 flex items-center gap-2 rounded-xl bg-surface-soft p-4 text-base text-ink-soft">
+            <LoaderCircle className="h-4 w-4 animate-spin text-pine" />
             Loading caregiver access...
           </div>
         )}
 
         {!isLoading && pendingRequests.length > 0 && (
           <div className="mt-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            <p className="text-sm font-semibold text-ink-soft">
               Requests awaiting your approval
             </p>
 
@@ -214,14 +210,14 @@ export function CaregiverAccess() {
           pendingRequests.length === 0 && (
             <div className="mt-5 rounded-xl bg-surface-soft p-5">
               <div className="flex items-start gap-3">
-                <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-navy" />
+                <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-pine" />
 
                 <div>
-                  <p className="text-sm font-semibold text-ink">
+                  <p className="text-base font-semibold text-ink">
                     No caregivers added yet
                   </p>
 
-                  <p className="mt-1 text-sm leading-6 text-ink-soft">
+                  <p className="mt-1 text-base leading-6 text-ink-soft">
                     Add a trusted caregiver if you want someone to help
                     coordinate appointments, transportation, check-ins, or
                     shared documents.
@@ -289,7 +285,7 @@ function CaregiverCard({
             <StatusBadge status={caregiver.status} />
           </div>
 
-          <p className="mt-1 text-sm text-ink-soft">
+          <p className="mt-1 text-base text-ink-soft">
             {caregiver.relationship}
             {" · "}
             {caregiver.email}
@@ -299,7 +295,7 @@ function CaregiverCard({
             {caregiver.permissions.map((permission) => (
               <span
                 key={permission}
-                className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-navy"
+                className="rounded-full bg-white px-2.5 py-1 text-sm font-medium text-pine"
               >
                 {permissionLabel(permission)}
               </span>
@@ -310,7 +306,7 @@ function CaregiverCard({
         <button
           type="button"
           onClick={onManage}
-          className="rounded-lg border border-border bg-white px-3.5 py-2 text-sm font-semibold text-navy transition hover:bg-navy-tint"
+          className="rounded-lg border border-border bg-white px-3.5 py-2 text-base font-semibold text-pine transition hover:bg-pine-tint"
         >
           Manage access
         </button>
@@ -370,16 +366,16 @@ function PendingCaregiver({
   }
 
   return (
-    <div className="rounded-xl border border-gold/30 bg-gold/5 p-4">
+    <div className="rounded-xl border border-sun/30 bg-sun/5 p-4">
       <p className="font-semibold text-ink">{caregiver.caregiver_name}</p>
 
-      <p className="mt-1 text-sm text-ink-soft">
+      <p className="mt-1 text-base text-ink-soft">
         {caregiver.relationship}
         {" · "}
         {caregiver.email}
       </p>
 
-      <p className="mt-4 text-sm font-semibold text-ink">
+      <p className="mt-4 text-base font-semibold text-ink">
         Choose what they can access
       </p>
 
@@ -390,7 +386,7 @@ function PendingCaregiver({
           type="button"
           disabled={isSaving || permissions.length === 0}
           onClick={() => void approve()}
-          className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2 text-base font-semibold text-white disabled:opacity-50"
         >
           {isSaving ? (
             <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -404,7 +400,7 @@ function PendingCaregiver({
           type="button"
           disabled={isSaving}
           onClick={() => void decline()}
-          className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-ink"
+          className="rounded-lg border border-border bg-white px-4 py-2 text-base font-semibold text-ink"
         >
           Decline
         </button>
@@ -530,9 +526,9 @@ function AddCaregiverDialog({
       />
 
       <div>
-        <p className="text-sm font-semibold text-ink">Permissions</p>
+        <p className="text-base font-semibold text-ink">Permissions</p>
 
-        <p className="mt-1 text-xs leading-5 text-ink-soft">
+        <p className="mt-1 text-sm leading-5 text-ink-soft">
           You can change these later.
         </p>
 
@@ -551,7 +547,7 @@ function AddCaregiverDialog({
         type="button"
         disabled={isSubmitting || form.permissions.length === 0}
         onClick={() => void submit()}
-        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:opacity-50"
+        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-pine px-4 py-3 text-base font-semibold text-white transition hover:bg-pine-deep disabled:opacity-50"
       >
         {isSubmitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
         Send caregiver invitation
@@ -623,7 +619,7 @@ function ManageCaregiverDialog({
         type="button"
         disabled={isSaving || permissions.length === 0}
         onClick={() => void save()}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-navy px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-pine px-4 py-3 text-base font-semibold text-white disabled:opacity-50"
       >
         {isSaving && <LoaderCircle className="h-4 w-4 animate-spin" />}
         Save permissions
@@ -641,7 +637,7 @@ function ManageCaregiverDialog({
             void revoke();
           }
         }}
-        className="w-full rounded-lg border border-priority-high/30 bg-priority-high-tint px-4 py-3 text-sm font-semibold text-priority-high"
+        className="w-full rounded-lg border border-priority-high/30 bg-priority-high-tint px-4 py-3 text-base font-semibold text-priority-high"
       >
         Revoke caregiver access
       </button>
@@ -676,14 +672,14 @@ function PermissionSelector({
             onClick={() => toggle(permission.value)}
             className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
               selected
-                ? "border-navy bg-navy-tint"
+                ? "border-pine bg-pine-tint"
                 : "border-border bg-white hover:bg-surface-soft"
             }`}
           >
             <div
               className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded ${
                 selected
-                  ? "bg-navy text-white"
+                  ? "bg-pine text-white"
                   : "border border-border bg-white"
               }`}
             >
@@ -691,11 +687,11 @@ function PermissionSelector({
             </div>
 
             <div>
-              <p className="text-sm font-semibold text-ink">
+              <p className="text-base font-semibold text-ink">
                 {permission.label}
               </p>
 
-              <p className="mt-0.5 text-xs leading-5 text-ink-soft">
+              <p className="mt-0.5 text-sm leading-5 text-ink-soft">
                 {permission.description}
               </p>
             </div>
@@ -718,13 +714,13 @@ function DialogShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/50 p-4">
       <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-border p-5">
           <div>
-            <h2 className="text-xl font-semibold text-navy-deep">{title}</h2>
+            <h2 className="text-xl font-semibold text-pine-deep">{title}</h2>
 
-            <p className="mt-1 text-sm leading-6 text-ink-soft">
+            <p className="mt-1 text-base leading-6 text-ink-soft">
               {description}
             </p>
           </div>
@@ -759,14 +755,14 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-ink">{label}</span>
+      <span className="text-base font-semibold text-ink">{label}</span>
 
       <input
         type={type}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm text-ink outline-none transition focus:border-navy"
+        className="mt-2 w-full rounded-lg border border-border bg-white px-3 py-2.5 text-base text-ink outline-none transition focus:border-pine"
       />
     </label>
   );
@@ -775,7 +771,7 @@ function Field({
 function StatusBadge({ status }: { status: PatientCaregiver["status"] }) {
   if (status === "active") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-priority-low-tint px-2.5 py-1 text-xs font-semibold text-priority-low">
+      <span className="inline-flex items-center gap-1 rounded-full bg-priority-low-tint px-2.5 py-1 text-sm font-semibold text-priority-low">
         <ShieldCheck className="h-3 w-3" />
         Active
       </span>
@@ -784,7 +780,7 @@ function StatusBadge({ status }: { status: PatientCaregiver["status"] }) {
 
   if (status === "invited") {
     return (
-      <span className="rounded-full bg-navy-tint px-2.5 py-1 text-xs font-semibold text-navy">
+      <span className="rounded-full bg-pine-tint px-2.5 py-1 text-sm font-semibold text-pine">
         Invitation sent
       </span>
     );

@@ -199,11 +199,7 @@ export default function AdminPage() {
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-gold">
-              COMPASS ADMINISTRATION
-            </p>
-
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy-deep sm:text-4xl">
+            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-pine-deep sm:text-4xl">
               Organization workspace
             </h1>
 
@@ -221,7 +217,7 @@ export default function AdminPage() {
 
               setShowInvite(true);
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             <Plus className="h-4 w-4" />
             Invite Navigator
@@ -332,7 +328,7 @@ function NavigatorCard({ navigator }: { navigator: AdminNavigator }) {
     <article className="rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy-tint text-sm font-bold text-navy">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pine-tint text-sm font-bold text-pine">
             {getInitials(navigator.first_name, navigator.last_name)}
           </div>
 
@@ -345,7 +341,7 @@ function NavigatorCard({ navigator }: { navigator: AdminNavigator }) {
               <StatusBadge status={navigator.status} />
             </div>
 
-            <p className="mt-1 text-sm font-medium text-navy">
+            <p className="mt-1 text-sm font-medium text-pine">
               {navigator.job_title}
             </p>
 
@@ -402,13 +398,11 @@ function InviteNavigatorModal({
   onSubmit: (event: React.SubmitEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/40 px-4 py-8 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/40 px-4 py-8 backdrop-blur-sm">
       <div className="max-h-full w-full max-w-xl overflow-y-auto rounded-2xl border border-border bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-border p-5 sm:p-6">
           <div>
-            <p className="text-sm font-semibold text-gold">NEW NAVIGATOR</p>
-
-            <h2 className="mt-1 text-xl font-bold text-navy-deep">
+            <h2 className="mt-1 text-xl font-bold text-pine-deep">
               Invite navigator
             </h2>
 
@@ -423,7 +417,7 @@ function InviteNavigatorModal({
             disabled={isSubmitting}
             onClick={onClose}
             aria-label="Close"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition hover:bg-surface-soft hover:text-navy disabled:opacity-50"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft transition hover:bg-surface-soft hover:text-pine disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
@@ -553,7 +547,7 @@ function InviteNavigatorModal({
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
-              className="rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-ink-soft transition hover:border-navy/30 hover:text-navy disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-ink-soft transition hover:border-pine/30 hover:text-pine disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -561,7 +555,7 @@ function InviteNavigatorModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>
@@ -623,11 +617,11 @@ function SummaryCard({
   return (
     <div className="rounded-2xl border border-border bg-white p-5">
       <div className="flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-tint text-navy [&>svg]:h-5 [&>svg]:w-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pine-tint text-pine [&>svg]:h-5 [&>svg]:w-5">
           {icon}
         </div>
 
-        <span className="text-3xl font-bold tracking-tight text-navy-deep">
+        <span className="text-3xl font-bold tracking-tight text-pine-deep">
           {value}
         </span>
       </div>
@@ -643,7 +637,7 @@ function StatusBadge({ status }: { status: AdminNavigator["status"] }) {
   const styles = {
     active: "bg-priority-low-tint text-priority-low",
 
-    pending: "bg-gold-tint text-navy-deep",
+    pending: "bg-sun-tint text-pine-deep",
 
     suspended: "bg-priority-high-tint text-priority-high",
 
@@ -663,7 +657,7 @@ function LoadingState() {
   return (
     <div className="mt-10 flex min-h-64 items-center justify-center rounded-2xl border border-border bg-white">
       <div className="text-center">
-        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-navy" />
+        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-pine" />
 
         <p className="mt-3 text-sm text-ink-soft">
           Loading administrator workspace...
@@ -696,7 +690,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="mt-4 rounded-lg bg-pine px-4 py-2 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             Try again
           </button>
@@ -721,7 +715,7 @@ function EmptyState({ onInvite }: { onInvite: () => void }) {
       <button
         type="button"
         onClick={onInvite}
-        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep"
+        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep"
       >
         <Plus className="h-4 w-4" />
         Invite Navigator
@@ -731,7 +725,7 @@ function EmptyState({ onInvite }: { onInvite: () => void }) {
 }
 
 const inputClasses =
-  "w-full rounded-xl border border-border px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70";
+  "w-full rounded-xl border border-border px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/45 focus:border-pine focus:ring-2 focus:ring-pine/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70";
 
 function getInitials(firstName: string, lastName: string) {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();

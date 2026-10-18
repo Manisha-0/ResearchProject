@@ -20,17 +20,13 @@ export function CareJourney({
   ].sort(compareJourneyItems);
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+    <section className="border-t border-border pt-8">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-          My Care Journey
-        </p>
-
-        <h2 className="mt-1 text-xl font-semibold text-navy-deep">
+        <h2 className="text-[1.5rem] font-bold leading-tight text-pine-deep">
           Where you are in treatment
         </h2>
 
-        <p className="mt-2 text-sm leading-6 text-ink-soft">
+        <p className="mt-2 text-base leading-6 text-ink-soft">
           Compass keeps earlier milestones
           and what comes next in one
           timeline.
@@ -39,7 +35,7 @@ export function CareJourney({
 
       <div className="mt-7">
         {orderedJourney.length === 0 ? (
-          <p className="text-sm text-ink-soft">
+          <p className="text-base text-ink-soft">
             No care journey items are
             available yet.
           </p>
@@ -62,11 +58,11 @@ export function CareJourney({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-ink">
+                    <h3 className="text-base font-semibold text-ink">
                       {item.title}
                     </h3>
 
-                    <span className="text-xs text-ink-soft">
+                    <span className="text-sm text-ink-soft">
                       {formatJourneyDate(
                         item,
                       )}
@@ -74,7 +70,7 @@ export function CareJourney({
                   </div>
 
                   {item.description && (
-                    <p className="mt-1 text-sm leading-6 text-ink-soft">
+                    <p className="mt-1 text-base leading-6 text-ink-soft">
                       {
                         item.description
                       }
@@ -82,7 +78,7 @@ export function CareJourney({
                   )}
 
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="inline-flex rounded-full bg-surface-soft px-2.5 py-1 text-xs font-medium text-ink-soft">
+                    <span className="inline-flex rounded-full bg-surface-soft px-2.5 py-1 text-sm font-medium text-ink-soft">
                       {formatStatus(
                         item.item_type,
                       )}
@@ -90,14 +86,14 @@ export function CareJourney({
 
                     {item.status ===
                       "in_progress" && (
-                      <span className="inline-flex rounded-full bg-gold-tint px-2.5 py-1 text-xs font-semibold text-navy-deep">
+                      <span className="inline-flex rounded-full bg-sun-tint px-2.5 py-1 text-sm font-semibold text-pine-deep">
                         Current stage
                       </span>
                     )}
 
                     {item.status ===
                       "cancelled" && (
-                      <span className="inline-flex rounded-full bg-priority-high-tint px-2.5 py-1 text-xs font-semibold text-priority-high">
+                      <span className="inline-flex rounded-full bg-priority-high-tint px-2.5 py-1 text-sm font-semibold text-priority-high">
                         Cancelled
                       </span>
                     )}
@@ -127,8 +123,8 @@ function JourneyIcon({
 
   if (status === "in_progress") {
     return (
-      <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-tint">
-        <Clock3 className="h-4 w-4 text-navy" />
+      <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sun-tint">
+        <Clock3 className="h-4 w-4 text-pine" />
       </div>
     );
   }

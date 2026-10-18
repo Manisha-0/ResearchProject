@@ -104,15 +104,11 @@ export function ScheduleAppointmentDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/55 px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/55 px-4 py-6 backdrop-blur-sm">
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Care journey
-            </p>
-
-            <h2 className="mt-1 text-xl font-semibold text-navy-deep">
+            <h2 className="mt-1 text-xl font-semibold text-pine-deep">
               Schedule appointment
             </h2>
           </div>
@@ -198,12 +194,12 @@ export function ScheduleAppointmentDialog({
                 maxLength={3000}
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-navy focus:ring-2 focus:ring-navy/10"
+                className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/10"
               />
             </div>
           </div>
 
-          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl bg-navy-tint p-4">
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl bg-pine-tint p-4">
             <input
               type="checkbox"
               checked={patientVisible}
@@ -212,7 +208,7 @@ export function ScheduleAppointmentDialog({
             />
 
             <div>
-              <p className="text-sm font-semibold text-navy-deep">
+              <p className="text-sm font-semibold text-pine-deep">
                 Show this appointment to the patient
               </p>
 
@@ -245,7 +241,7 @@ export function ScheduleAppointmentDialog({
               type="button"
               disabled={isSubmitting}
               onClick={() => void handleSubmit()}
-              className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -295,7 +291,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-navy focus:ring-2 focus:ring-navy/10"
+        className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/10"
       />
     </div>
   );

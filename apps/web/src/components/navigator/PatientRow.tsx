@@ -33,11 +33,11 @@ export function PatientRow({ patient }: PatientRowProps) {
         text-left
         transition
         hover:-translate-y-0.5
-        hover:border-navy/25
+        hover:border-pine/25
         hover:shadow-md
         focus:outline-none
         focus-visible:ring-2
-        focus-visible:ring-navy
+        focus-visible:ring-pine
       "
     >
       <div className="flex items-start gap-4">
@@ -50,10 +50,10 @@ export function PatientRow({ patient }: PatientRowProps) {
             items-center
             justify-center
             rounded-full
-            bg-navy-tint
+            bg-pine-tint
             text-sm
             font-bold
-            text-navy
+            text-pine
           "
         >
           {patient.initials}
@@ -75,7 +75,7 @@ export function PatientRow({ patient }: PatientRowProps) {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <span className="font-medium text-navy">
+            <span className="font-medium text-pine">
               {patient.nextTreatment.label}
             </span>
 
@@ -120,7 +120,7 @@ export function PatientRow({ patient }: PatientRowProps) {
             text-ink-soft/40
             transition
             group-hover:translate-x-1
-            group-hover:text-navy
+            group-hover:text-pine
           "
         />
       </div>

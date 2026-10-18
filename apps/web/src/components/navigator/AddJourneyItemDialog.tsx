@@ -132,15 +132,11 @@ export function AddJourneyItemDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/55 px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/55 px-4 py-6 backdrop-blur-sm">
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Care journey
-            </p>
-
-            <h2 className="mt-1 text-xl font-semibold text-navy-deep">
+            <h2 className="mt-1 text-xl font-semibold text-pine-deep">
               Add journey item
             </h2>
 
@@ -179,13 +175,13 @@ export function AddJourneyItemDialog({
                     onClick={() => setItemType(option.value)}
                     className={`rounded-xl border p-4 text-left transition ${
                       selected
-                        ? "border-navy bg-navy-tint"
-                        : "border-border bg-white hover:border-navy/30"
+                        ? "border-pine bg-pine-tint"
+                        : "border-border bg-white hover:border-pine/30"
                     }`}
                   >
                     <p
                       className={`text-sm font-semibold ${
-                        selected ? "text-navy-deep" : "text-ink"
+                        selected ? "text-pine-deep" : "text-ink"
                       }`}
                     >
                       {option.label}
@@ -222,7 +218,7 @@ export function AddJourneyItemDialog({
               rows={4}
               maxLength={3000}
               placeholder="Add relevant care journey details..."
-              className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/50 focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-60"
+              className="mt-2 w-full resize-none rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/50 focus:border-pine focus:ring-2 focus:ring-pine/10 disabled:opacity-60"
             />
           </div>
 
@@ -240,7 +236,7 @@ export function AddJourneyItemDialog({
             </p>
           </div>
 
-          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl bg-navy-tint p-4">
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl bg-pine-tint p-4">
             <input
               type="checkbox"
               checked={patientVisible}
@@ -250,7 +246,7 @@ export function AddJourneyItemDialog({
             />
 
             <div>
-              <p className="text-sm font-semibold text-navy-deep">
+              <p className="text-sm font-semibold text-pine-deep">
                 Show this item to the patient
               </p>
 
@@ -282,7 +278,7 @@ export function AddJourneyItemDialog({
               type="button"
               disabled={isSubmitting}
               onClick={() => void handleSubmit()}
-              className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -332,7 +328,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/50 focus:border-navy focus:ring-2 focus:ring-navy/10"
+        className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink-soft/50 focus:border-pine focus:ring-2 focus:ring-pine/10"
       />
     </div>
   );

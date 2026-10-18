@@ -5,161 +5,102 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  PhoneCall,
   RotateCcw,
 } from "lucide-react";
-import {
-  usePathname,
-  useRouter,
-} from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
-import {
-  getHomeRouteForRole,
-} from "@/lib/auth-routing";
-
-import {
-  useAuthStore,
-} from "@/store/auth-store";
-
-import {
-  useCompassStore,
-} from "@/store/compass-store";
+import { CompassMark } from "@/components/app/CompassMark";
+import { getHomeRouteForRole } from "@/lib/auth-routing";
+import { useAuthStore } from "@/store/auth-store";
+import { useCompassStore } from "@/store/compass-store";
 
 type AppHeaderProps = {
   showReset?: boolean;
 };
 
-export function AppHeader({
-  showReset = false,
-}: AppHeaderProps) {
+const NAVIGATOR_LINKS = [
+  {
+    href: "/navigator",
+    label: "Patients",
+    icon: LayoutDashboard,
+    match: (path: string) =>
+      path === "/navigator" || path.startsWith("/navigator/patient/"),
+  },
+  {
+    href: "/navigator/calls",
+    label: "Reminder calls",
+    icon: PhoneCall,
+    match: (path: string) => path.startsWith("/navigator/calls"),
+  },
+  {
+    href: "/navigator/tasks",
+    label: "Work queue",
+    icon: ClipboardList,
+    match: (path: string) => path.startsWith("/navigator/tasks"),
+  },
+];
+
+const ROLE_LABEL: Record<string, string> = {
+  super_admin: "Administrator",
+  navigator: "Navigator",
+  patient: "Patient",
+  caregiver: "Caregiver",
+};
+
+export function AppHeader({ showReset = false }: AppHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const resetDemo = useCompassStore((state) => state.resetDemo);
 
-  const user = useAuthStore(
-    (state) => state.user,
-  );
-
-  const logout = useAuthStore(
-    (state) => state.logout,
-  );
-
-  const resetDemo =
-    useCompassStore(
-      (state) =>
-        state.resetDemo,
-    );
-
-  const homeHref = user
-    ? getHomeRouteForRole(
-        user.role,
-      )
-    : "/";
+  const homeHref = user ? getHomeRouteForRole(user.role) : "/";
+  const isNavigator = user?.role === "navigator";
 
   function handleSignOut() {
     logout();
-
-    router.replace(
-      "/login",
-    );
-  }
-
-  function formatRole(
-    role: string,
-  ) {
-    return role
-      .split("_")
-      .map(
-        (part) =>
-          part
-            .charAt(0)
-            .toUpperCase() +
-          part.slice(1),
-      )
-      .join(" ");
+    router.replace("/login");
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-8">
+    <header className="sticky top-0 z-40 border-b border-border bg-white">
+      <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 sm:px-8">
         <Link
           href={homeHref}
-          className="flex shrink-0 items-center gap-3"
+          className="flex shrink-0 items-center gap-2.5 py-3 text-pine-deep"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy font-bold text-white">
-            C
-          </div>
-
-          <div className="hidden sm:block">
-            <p className="font-semibold text-navy">
-              Compass
-            </p>
-
-            <p className="text-xs text-ink-soft">
-              Cancer care
-              navigation
-            </p>
-          </div>
+          <CompassMark />
+          <span className="text-lg font-bold">Compass</span>
         </Link>
 
-        {user?.role ===
-          "navigator" && (
-          <nav className="ml-2 hidden items-center gap-1 md:flex">
-            <HeaderNavLink
-              href="/navigator"
-              active={
-                pathname ===
-                  "/navigator" ||
-                pathname.startsWith(
-                  "/navigator/patient/",
-                )
-              }
-              icon={
-                <LayoutDashboard />
-              }
-            >
-              Dashboard
-            </HeaderNavLink>
-
-            <HeaderNavLink
-              href="/navigator/tasks"
-              active={
-                pathname ===
-                  "/navigator/tasks" ||
-                pathname.startsWith(
-                  "/navigator/tasks/",
-                )
-              }
-              icon={
-                <ClipboardList />
-              }
-            >
-              Work Queue
-            </HeaderNavLink>
+        {isNavigator && (
+          <nav aria-label="Main" className="hidden self-stretch md:flex">
+            {NAVIGATOR_LINKS.map((link) => (
+              <NavLink key={link.href} {...link} active={link.match(pathname)} />
+            ))}
           </nav>
         )}
 
         <div className="ml-auto flex items-center gap-3">
           {user && (
-            <div className="hidden text-right sm:block">
-              <p className="max-w-55 truncate text-sm font-semibold text-ink">
+            <p className="hidden text-right text-sm leading-tight sm:block">
+              <span className="block max-w-56 truncate font-semibold text-ink">
                 {user.email}
-              </p>
-
-              <p className="text-xs text-ink-soft">
-                {formatRole(
-                  user.role,
-                )}
-              </p>
-            </div>
+              </span>
+              <span className="text-ink-soft">
+                {ROLE_LABEL[user.role] ?? user.role}
+              </span>
+            </p>
           )}
 
           {showReset && (
             <button
               type="button"
-              onClick={
-                resetDemo
-              }
+              onClick={resetDemo}
               title="Reset demo data"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-ink-soft transition hover:border-navy/30 hover:text-navy"
+              aria-label="Reset demo data"
+              className="rounded-lg p-2 text-ink-soft hover:bg-surface-soft hover:text-ink"
             >
               <RotateCcw className="h-4 w-4" />
             </button>
@@ -168,88 +109,53 @@ export function AppHeader({
           {user && (
             <button
               type="button"
-              onClick={
-                handleSignOut
-              }
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-ink-soft transition hover:border-navy/30 hover:text-navy"
+              onClick={handleSignOut}
+              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:bg-surface-soft hover:text-ink"
             >
               <LogOut className="h-4 w-4" />
-
-              <span className="hidden sm:inline">
-                Sign out
-              </span>
+              <span className="hidden sm:inline">Sign out</span>
             </button>
           )}
         </div>
       </div>
 
-      {user?.role ===
-        "navigator" && (
-        <div className="border-t border-border/70 md:hidden">
-          <nav className="mx-auto flex max-w-6xl gap-1 px-4 py-2 sm:px-8">
-            <HeaderNavLink
-              href="/navigator"
-              active={
-                pathname ===
-                  "/navigator" ||
-                pathname.startsWith(
-                  "/navigator/patient/",
-                )
-              }
-              icon={
-                <LayoutDashboard />
-              }
-            >
-              Dashboard
-            </HeaderNavLink>
-
-            <HeaderNavLink
-              href="/navigator/tasks"
-              active={
-                pathname ===
-                  "/navigator/tasks" ||
-                pathname.startsWith(
-                  "/navigator/tasks/",
-                )
-              }
-              icon={
-                <ClipboardList />
-              }
-            >
-              Work Queue
-            </HeaderNavLink>
-          </nav>
-        </div>
+      {isNavigator && (
+        <nav
+          aria-label="Main"
+          className="flex overflow-x-auto border-t border-border px-2 md:hidden"
+        >
+          {NAVIGATOR_LINKS.map((link) => (
+            <NavLink key={link.href} {...link} active={link.match(pathname)} />
+          ))}
+        </nav>
       )}
     </header>
   );
 }
 
-function HeaderNavLink({
+function NavLink({
   href,
+  label,
+  icon: Icon,
   active,
-  icon,
-  children,
 }: {
   href: string;
+  label: string;
+  icon: typeof PhoneCall;
   active: boolean;
-  icon: React.ReactNode;
-  children: React.ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className={
+      aria-current={active ? "page" : undefined}
+      className={`inline-flex shrink-0 items-center gap-2 border-b-[3px] px-3 py-3 text-[0.95rem] font-semibold transition-colors ${
         active
-          ? "inline-flex items-center gap-2 rounded-lg bg-navy-tint px-3 py-2 text-sm font-semibold text-navy"
-          : "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-surface-soft hover:text-navy"
-      }
+          ? "border-pine text-pine-deep"
+          : "border-transparent text-ink-soft hover:text-ink"
+      }`}
     >
-      <span className="[&>svg]:h-4 [&>svg]:w-4">
-        {icon}
-      </span>
-
-      {children}
+      <Icon aria-hidden className="h-4 w-4" />
+      {label}
     </Link>
   );
 }

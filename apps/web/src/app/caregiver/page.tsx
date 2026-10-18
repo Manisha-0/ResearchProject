@@ -159,14 +159,14 @@ export default function CaregiverPage() {
           <>
             <section>
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-tint">
-                  <HeartHandshake className="h-5 w-5 text-navy" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sun-tint">
+                  <HeartHandshake className="h-5 w-5 text-pine" />
                 </div>
 
                 <div>
                   <p className="text-sm text-ink-soft">Caregiver view</p>
 
-                  <h1 className="font-display text-3xl font-bold text-navy-deep">
+                  <h1 className="font-display text-3xl font-bold text-pine-deep">
                     Welcome, {portal.caregiver_first_name}
                   </h1>
                 </div>
@@ -202,8 +202,8 @@ export default function CaregiverPage() {
               </div>
             )}
 
-            <section className="mt-6 rounded-2xl bg-navy p-5 text-white sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            <section className="mt-6 rounded-2xl bg-pine p-5 text-white sm:p-6">
+              <p className="text-xs font-semibold text-ochre">
                 Need help?
               </p>
 
@@ -217,7 +217,7 @@ export default function CaregiverPage() {
                   </p>
                 </div>
 
-                <ChevronRight className="h-5 w-5 shrink-0 text-gold" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-ochre" />
               </div>
             </section>
 
@@ -261,7 +261,7 @@ function PatientAccessCard({
       <section>
         <p className="text-sm text-ink-soft">Helping</p>
 
-        <h2 className="mt-1 font-display text-2xl font-bold text-navy-deep">
+        <h2 className="mt-1 font-display text-2xl font-bold text-pine-deep">
           {patient.first_name} {patient.last_name}
         </h2>
 
@@ -273,7 +273,7 @@ function PatientAccessCard({
       {canViewAppointments && (
         <section className="mt-5 overflow-hidden rounded-2xl border border-border bg-white">
           <div className="border-b border-border p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            <p className="text-xs font-semibold text-ochre">
               Next appointment
             </p>
 
@@ -281,7 +281,7 @@ function PatientAccessCard({
               <>
                 <div className="mt-2 flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-xl font-semibold text-navy-deep">
+                    <h3 className="text-xl font-semibold text-pine-deep">
                       {patient.next_appointment.title}
                     </h3>
 
@@ -291,7 +291,7 @@ function PatientAccessCard({
                     </p>
                   </div>
 
-                  <CalendarDays className="h-6 w-6 shrink-0 text-navy" />
+                  <CalendarDays className="h-6 w-6 shrink-0 text-pine" />
                 </div>
 
                 <div className="mt-5 space-y-3">
@@ -329,7 +329,7 @@ function PatientAccessCard({
                       "rounded-xl",
                     transportationConfirmed
                       ? "bg-priority-low-tint"
-                      : "bg-gold-tint",
+                      : "bg-sun-tint",
                   ].join(" ")}
                 >
                   <Car
@@ -337,7 +337,7 @@ function PatientAccessCard({
                       "h-5 w-5",
                       transportationConfirmed
                         ? "text-priority-low"
-                        : "text-navy",
+                        : "text-pine",
                     ].join(" ")}
                   />
                 </div>
@@ -379,7 +379,7 @@ function PatientAccessCard({
                         type="button"
                         disabled={isConfirming}
                         onClick={onConfirmTransportation}
-                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-pine px-4 py-3 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {isConfirming ? (
                           <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -527,15 +527,11 @@ function CaregiverDocuments({
   return (
     <section className="mt-6 rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-tint">
-          <FileText className="h-5 w-5 text-navy" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pine-tint">
+          <FileText className="h-5 w-5 text-pine" />
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-            Shared Documents
-          </p>
-
           <h2 className="mt-1 text-lg font-semibold text-ink">
             Documents shared by {patient.first_name}
           </h2>
@@ -549,7 +545,7 @@ function CaregiverDocuments({
 
       {isLoading && (
         <div className="mt-5 flex items-center gap-2 rounded-xl bg-surface-soft p-4 text-sm text-ink-soft">
-          <LoaderCircle className="h-4 w-4 animate-spin text-navy" />
+          <LoaderCircle className="h-4 w-4 animate-spin text-pine" />
           Loading shared documents...
         </div>
       )}
@@ -596,7 +592,7 @@ function CaregiverDocuments({
                   <div className="min-w-0">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
-                        <FileText className="h-4 w-4 text-navy" />
+                        <FileText className="h-4 w-4 text-pine" />
                       </div>
 
                       <div className="min-w-0">
@@ -605,7 +601,7 @@ function CaregiverDocuments({
                         </p>
 
                         <div className="mt-2 flex flex-wrap gap-2">
-                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-navy">
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-pine">
                             {formatDocumentType(document.document_type)}
                           </span>
 
@@ -627,7 +623,7 @@ function CaregiverDocuments({
                     type="button"
                     disabled={isOpening}
                     onClick={() => void handleOpenDocument(document)}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isOpening ? (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -644,8 +640,8 @@ function CaregiverDocuments({
         </div>
       )}
 
-      <div className="mt-4 flex items-start gap-2 rounded-lg bg-navy-tint p-3">
-        <Eye className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+      <div className="mt-4 flex items-start gap-2 rounded-lg bg-pine-tint p-3">
+        <Eye className="mt-0.5 h-4 w-4 shrink-0 text-pine" />
 
         <p className="text-xs leading-5 text-ink-soft">
           Caregiver document access is read-only. Uploading, deleting, and
@@ -660,10 +656,6 @@ function PermissionPanel({ patient }: { patient: CaregiverPortalPatient }) {
   return (
     <section className="mt-6 rounded-2xl border border-border bg-white p-5 sm:p-6">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-          Your Access
-        </p>
-
         <h2 className="mt-1 text-lg font-semibold text-ink">
           What {patient.first_name} has shared with you
         </h2>
@@ -717,7 +709,7 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center gap-3 text-sm text-ink-soft">
-      <span className="[&>svg]:h-4 [&>svg]:w-4 [&>svg]:text-navy">{icon}</span>
+      <span className="[&>svg]:h-4 [&>svg]:w-4 [&>svg]:text-pine">{icon}</span>
 
       <span>{text}</span>
     </div>
@@ -760,7 +752,7 @@ function LoadingState() {
   return (
     <div className="flex min-h-72 items-center justify-center rounded-2xl border border-border bg-white">
       <div className="text-center">
-        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-navy" />
+        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-pine" />
 
         <p className="mt-3 text-sm text-ink-soft">
           Loading caregiver access...
@@ -793,7 +785,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="mt-4 rounded-lg bg-pine px-4 py-2 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             Try again
           </button>
@@ -807,7 +799,7 @@ function EmptyState() {
   return (
     <section className="mt-8 rounded-2xl border border-border bg-white p-6">
       <div className="flex items-start gap-3">
-        <HeartHandshake className="mt-0.5 h-5 w-5 text-navy" />
+        <HeartHandshake className="mt-0.5 h-5 w-5 text-pine" />
 
         <div>
           <p className="font-semibold text-ink">No active patient access</p>

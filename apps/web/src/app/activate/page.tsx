@@ -331,12 +331,12 @@ function ActivationPageShell({ children }: { children: React.ReactNode }) {
     <main className="min-h-screen bg-surface-soft px-5 py-10 sm:px-8">
       <div className="mx-auto max-w-md">
         <Link href="/" className="flex items-center justify-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-lg font-bold text-white">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-pine text-lg font-bold text-white">
             C
           </div>
 
           <div>
-            <p className="font-semibold text-navy">Compass</p>
+            <p className="font-semibold text-pine">Compass</p>
 
             <p className="text-xs text-ink-soft">Cancer care navigation</p>
           </div>
@@ -374,15 +374,15 @@ function PatientVerificationForm({
 }) {
   return (
     <>
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-tint text-navy">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-pine-tint text-pine">
         <ShieldCheck className="h-6 w-6" />
       </div>
 
-      <p className="mt-6 text-sm font-semibold text-gold">
+      <p className="mt-6 text-sm font-semibold text-ochre">
         PATIENT VERIFICATION
       </p>
 
-      <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-navy-deep">
+      <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-pine-deep">
         Verify your information
       </h1>
 
@@ -465,13 +465,13 @@ function PasswordForm({
 }) {
   return (
     <>
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-navy-tint text-navy">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-pine-tint text-pine">
         <KeyRound className="h-6 w-6" />
       </div>
 
-      <p className="mt-6 text-sm font-semibold text-gold">ACCOUNT ACTIVATION</p>
+      <p className="mt-6 text-sm font-semibold text-ochre">ACCOUNT ACTIVATION</p>
 
-      <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-navy-deep">
+      <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-pine-deep">
         {invitation.firstName
           ? `Welcome, ${invitation.firstName}`
           : "Create your password"}
@@ -483,7 +483,7 @@ function PasswordForm({
       </p>
 
       <div className="mt-5 flex items-center gap-3 rounded-xl bg-surface-soft p-4">
-        <Mail className="h-4 w-4 shrink-0 text-navy" />
+        <Mail className="h-4 w-4 shrink-0 text-pine" />
 
         <p className="min-w-0 truncate text-sm font-medium text-ink">
           {invitation.email}
@@ -508,7 +508,7 @@ function PasswordForm({
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-ink-soft transition hover:text-navy"
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-ink-soft transition hover:text-pine"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? (
@@ -536,8 +536,8 @@ function PasswordForm({
           />
         </label>
 
-        <div className="flex items-start gap-2 rounded-xl bg-navy-tint p-3">
-          <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+        <div className="flex items-start gap-2 rounded-xl bg-pine-tint p-3">
+          <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-pine" />
 
           <p className="text-xs leading-5 text-ink-soft">
             Your password will be checked against Compass password security
@@ -576,9 +576,9 @@ function SuccessState({ message }: { message: string }) {
         <CheckCircle2 className="h-7 w-7" />
       </div>
 
-      <p className="mt-6 text-sm font-semibold text-gold">ACCOUNT ACTIVE</p>
+      <p className="mt-6 text-sm font-semibold text-ochre">ACCOUNT ACTIVE</p>
 
-      <h1 className="mt-2 font-display text-2xl font-bold text-navy-deep">
+      <h1 className="mt-2 font-display text-2xl font-bold text-pine-deep">
         You&apos;re ready to use Compass
       </h1>
 
@@ -598,11 +598,11 @@ function InvalidState({ message }: { message: string }) {
         <AlertCircle className="h-7 w-7" />
       </div>
 
-      <p className="mt-6 text-sm font-semibold text-gold">
+      <p className="mt-6 text-sm font-semibold text-ochre">
         INVITATION UNAVAILABLE
       </p>
 
-      <h1 className="mt-2 font-display text-2xl font-bold text-navy-deep">
+      <h1 className="mt-2 font-display text-2xl font-bold text-pine-deep">
         This link cannot be used
       </h1>
 
@@ -615,7 +615,7 @@ function InvalidState({ message }: { message: string }) {
 
       <Link
         href="/login"
-        className="mt-7 inline-flex rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-navy transition hover:border-navy/30"
+        className="mt-7 inline-flex rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-pine transition hover:border-pine/30"
       >
         Return to sign in
       </Link>
@@ -626,7 +626,7 @@ function InvalidState({ message }: { message: string }) {
 function LoadingState({ message }: { message: string }) {
   return (
     <div className="py-10 text-center">
-      <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-navy" />
+      <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-pine" />
 
       <p className="mt-4 text-sm text-ink-soft">{message}</p>
     </div>
@@ -668,7 +668,7 @@ function getErrorMessage(caughtError: unknown, fallback: string) {
 }
 
 const inputClasses =
-  "mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70";
+  "mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70";
 
 const primaryButtonClasses =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg bg-pine px-4 py-3 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60";

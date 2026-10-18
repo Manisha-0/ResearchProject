@@ -56,18 +56,18 @@ export default function LoginPage() {
       <div className="mx-auto max-w-md px-5 py-10 sm:py-16">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft transition hover:text-navy"
+          className="inline-flex items-center gap-2 text-sm font-medium text-ink-soft transition hover:text-pine"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Compass
         </Link>
 
         <div className="mt-10 rounded-2xl border border-border bg-white p-6 sm:p-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-navy">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-pine">
             <LockKeyhole className="h-5 w-5 text-white" />
           </div>
 
-          <h1 className="mt-6 font-display text-3xl font-bold text-navy-deep">
+          <h1 className="mt-6 font-display text-3xl font-bold text-pine-deep">
             Sign in to Compass
           </h1>
 
@@ -96,7 +96,7 @@ export default function LoginPage() {
                 }
               }}
               placeholder="name@example.com"
-              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70"
+              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-pine focus:ring-2 focus:ring-pine/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70"
             />
 
             <label
@@ -121,7 +121,7 @@ export default function LoginPage() {
                 }
               }}
               placeholder="••••••••"
-              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70"
+              className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm outline-none transition placeholder:text-ink-soft/45 focus:border-pine focus:ring-2 focus:ring-pine/10 disabled:cursor-not-allowed disabled:bg-surface-soft disabled:opacity-70"
             />
 
             {storeError && (
@@ -136,7 +136,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3.5 font-semibold text-white transition hover:bg-navy-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-pine px-5 py-3.5 font-semibold text-white transition hover:bg-pine-deep focus:outline-none focus-visible:ring-2 focus-visible:ring-sun focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (
                 <>

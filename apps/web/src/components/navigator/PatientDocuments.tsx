@@ -229,15 +229,11 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
       <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-tint text-navy">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pine-tint text-pine">
               <FileText className="h-5 w-5" />
             </div>
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-                Documents
-              </p>
-
               <h2 className="mt-1 font-semibold text-ink">Patient records</h2>
 
               <p className="mt-1 text-sm leading-6 text-ink-soft">
@@ -254,7 +250,7 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
 
               setIsUploadOpen(true);
             }}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             <Upload className="h-4 w-4" />
             Upload document
@@ -272,7 +268,7 @@ export function PatientDocuments({ patientId }: { patientId: string }) {
         <div className="mt-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
-              <LoaderCircle className="h-5 w-5 animate-spin text-navy" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-pine" />
 
               <p className="ml-3 text-sm text-ink-soft">Loading documents...</p>
             </div>
@@ -440,13 +436,13 @@ function DocumentCard({
       <div className="p-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-navy">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-pine">
               <FileText className="h-4 w-4" />
             </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-gold-tint px-2.5 py-1 text-[11px] font-semibold text-navy-deep">
+                <span className="rounded-full bg-sun-tint px-2.5 py-1 text-[11px] font-semibold text-pine-deep">
                   {formatDocumentType(document.document_type)}
                 </span>
 
@@ -463,7 +459,7 @@ function DocumentCard({
                 )}
 
                 {summary && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-navy-tint px-2.5 py-1 text-[11px] font-semibold text-navy">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-pine-tint px-2.5 py-1 text-[11px] font-semibold text-pine">
                     <Sparkles className="h-3 w-3" />
                     AI summary
                   </span>
@@ -489,7 +485,7 @@ function DocumentCard({
               type="button"
               disabled={isOpening}
               onClick={onOpen}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-pine transition hover:bg-pine-tint disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isOpening ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -514,7 +510,7 @@ function DocumentCard({
         <div className="mt-4 border-t border-border pt-4">
           {isSummaryLoading ? (
             <div className="flex items-center gap-2 text-xs text-ink-soft">
-              <LoaderCircle className="h-4 w-4 animate-spin text-navy" />
+              <LoaderCircle className="h-4 w-4 animate-spin text-pine" />
               Checking AI summary...
             </div>
           ) : summary ? (
@@ -524,12 +520,12 @@ function DocumentCard({
                 onClick={() => setIsExpanded((current) => !current)}
                 className="inline-flex items-center gap-2 text-left"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy-tint text-navy">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pine-tint text-pine">
                   <Brain className="h-4 w-4" />
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold text-navy">
+                  <p className="text-xs font-semibold text-pine">
                     AI Navigator Summary
                   </p>
 
@@ -549,7 +545,7 @@ function DocumentCard({
                 type="button"
                 disabled={isGenerating}
                 onClick={() => void handleGenerateSummary()}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-pine transition hover:bg-pine-tint disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isGenerating ? (
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -563,7 +559,7 @@ function DocumentCard({
           ) : (
             <div className="flex flex-col gap-3 rounded-xl bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-tint text-navy">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-pine-tint text-pine">
                   <Sparkles className="h-4 w-4" />
                 </div>
 
@@ -582,7 +578,7 @@ function DocumentCard({
                 type="button"
                 disabled={isGenerating}
                 onClick={() => void handleGenerateSummary()}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-navy px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-pine px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isGenerating ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -613,14 +609,14 @@ function DocumentCard({
 function DocumentSummaryPanel({ summary }: { summary: DocumentSummary }) {
   return (
     <div className="border-t border-border bg-white p-4 sm:p-5">
-      <div className="rounded-xl border border-navy/10 bg-navy-tint/30 p-4">
+      <div className="rounded-xl border border-pine/10 bg-pine-tint/30 p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-navy">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-pine">
             <Brain className="h-4 w-4" />
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+            <p className="text-xs font-semibold text-ochre">
               AI Navigator Summary
             </p>
 
@@ -663,7 +659,7 @@ function DocumentSummaryPanel({ summary }: { summary: DocumentSummary }) {
 
       <div className="mt-5 rounded-xl border border-border bg-surface-soft p-3">
         <div className="flex items-start gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-pine" />
 
           <p className="text-[11px] leading-5 text-ink-soft">
             AI-generated from this document for navigation support. It does not
@@ -677,7 +673,7 @@ function DocumentSummaryPanel({ summary }: { summary: DocumentSummary }) {
           <span>Generated: {formatDateTime(summary.updated_at)}</span>
 
           {summary.source_truncated && (
-            <span className="font-semibold text-gold">
+            <span className="font-semibold text-ochre">
               Source text truncated
             </span>
           )}
@@ -698,10 +694,10 @@ function SummarySection({
 }) {
   return (
     <div className="mt-5">
-      <div className="flex items-center gap-2 text-navy">
+      <div className="flex items-center gap-2 text-pine">
         {icon}
 
-        <h4 className="text-xs font-semibold uppercase tracking-wide">
+        <h4 className="text-xs font-semibold">
           {title}
         </h4>
       </div>
@@ -712,7 +708,7 @@ function SummarySection({
             key={`${title}-${index}`}
             className="flex items-start gap-2 text-sm leading-6 text-ink"
           >
-            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
+            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sun" />
 
             <span>{item}</span>
           </li>
@@ -737,7 +733,7 @@ function DeleteDocumentDialog({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/55 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/55 px-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-border bg-white shadow-2xl">
         <div className="p-5 sm:p-6">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-priority-high-tint text-priority-high">
@@ -798,7 +794,7 @@ function DeleteDocumentDialog({
 function EmptyDocuments() {
   return (
     <div className="rounded-xl border border-dashed border-border bg-surface-soft px-5 py-8 text-center">
-      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white text-navy">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white text-pine">
         <FileText className="h-5 w-5" />
       </div>
 
@@ -926,14 +922,10 @@ function UploadDocumentDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/55 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-pine-deep/55 px-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-2xl border border-border bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-              Patient Documents
-            </p>
-
             <h2 className="mt-1 text-lg font-semibold text-ink">
               Upload document
             </h2>
@@ -966,7 +958,7 @@ function UploadDocumentDialog({
               onChange={(event) =>
                 setDocumentType(event.target.value as DocumentType)
               }
-              className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-navy focus:ring-2 focus:ring-navy/10 disabled:opacity-60"
+              className="mt-2 w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-pine focus:ring-2 focus:ring-pine/10 disabled:opacity-60"
             >
               {DOCUMENT_TYPES.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -992,9 +984,9 @@ function UploadDocumentDialog({
               type="button"
               disabled={isSubmitting}
               onClick={() => fileInputRef.current?.click()}
-              className="mt-2 flex w-full items-center gap-4 rounded-xl border border-dashed border-border bg-surface-soft p-4 text-left transition hover:border-navy/30 hover:bg-navy-tint/40 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 flex w-full items-center gap-4 rounded-xl border border-dashed border-border bg-surface-soft p-4 text-left transition hover:border-pine/30 hover:bg-pine-tint/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-navy">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-pine">
                 <Upload className="h-5 w-5" />
               </div>
 
@@ -1018,12 +1010,12 @@ function UploadDocumentDialog({
               checked={patientVisible}
               disabled={isSubmitting}
               onChange={(event) => setPatientVisible(event.target.checked)}
-              className="mt-1 h-4 w-4 accent-navy"
+              className="mt-1 h-4 w-4 accent-pine"
             />
 
             <div>
               <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-navy" />
+                <Eye className="h-4 w-4 text-pine" />
 
                 <p className="text-sm font-semibold text-ink">
                   Share with patient
@@ -1090,7 +1082,7 @@ function UploadDocumentDialog({
             <button
               type="submit"
               disabled={isSubmitting || !selectedFile}
-              className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />

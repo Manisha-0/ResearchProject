@@ -15,7 +15,8 @@ export type NavigationNeedStatus =
 
 export type CheckInSource =
   | "patient"
-  | "caregiver";
+  | "caregiver"
+  | "voice_call";
 
 export type CaregiverAccessStatus =
   | "pending_patient_approval"

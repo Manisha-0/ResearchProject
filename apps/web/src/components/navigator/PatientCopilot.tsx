@@ -133,17 +133,17 @@ export default function PatientCopilot({
         className="flex w-full items-center justify-between gap-4 p-5 text-left sm:p-6"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-tint text-navy">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sun-tint text-pine">
             <Sparkles className="h-5 w-5" />
           </div>
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+              <p className="text-xs font-semibold text-ochre">
                 AI Navigation Support
               </p>
 
-              <span className="rounded-full bg-navy-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-navy">
+              <span className="rounded-full bg-pine-tint px-2 py-0.5 text-[10px] font-semibold text-pine">
                 Copilot
               </span>
             </div>
@@ -170,12 +170,12 @@ export default function PatientCopilot({
         <div className="border-t border-border">
           {messages.length === 0 && (
             <div className="p-5 sm:p-6">
-              <div className="rounded-xl bg-navy-tint p-4">
+              <div className="rounded-xl bg-pine-tint p-4">
                 <div className="flex items-start gap-3">
-                  <Bot className="mt-0.5 h-5 w-5 shrink-0 text-navy" />
+                  <Bot className="mt-0.5 h-5 w-5 shrink-0 text-pine" />
 
                   <div>
-                    <p className="text-sm font-semibold text-navy-deep">
+                    <p className="text-sm font-semibold text-pine-deep">
                       Navigator support, grounded in the patient record.
                     </p>
 
@@ -189,7 +189,7 @@ export default function PatientCopilot({
               </div>
 
               <div className="mt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+                <p className="text-xs font-semibold text-ink-soft">
                   Suggested questions
                 </p>
 
@@ -200,7 +200,7 @@ export default function PatientCopilot({
                       type="button"
                       disabled={isLoading}
                       onClick={() => void submitQuestion(suggestion)}
-                      className="rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-navy transition hover:bg-navy-tint disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-border bg-white px-3 py-2 text-xs font-semibold text-pine transition hover:bg-pine-tint disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {suggestion}
                     </button>
@@ -224,7 +224,7 @@ export default function PatientCopilot({
                   <div
                     className={
                       message.role === "user"
-                        ? "max-w-[88%] rounded-2xl rounded-br-md bg-navy px-4 py-3 text-sm leading-6 text-white"
+                        ? "max-w-[88%] rounded-2xl rounded-br-md bg-pine px-4 py-3 text-sm leading-6 text-white"
                         : "max-w-[94%] rounded-2xl rounded-bl-md bg-surface-soft px-4 py-3 text-sm leading-6 text-ink"
                     }
                   >
@@ -234,7 +234,7 @@ export default function PatientCopilot({
                       message.sources &&
                       message.sources.length > 0 && (
                         <div className="mt-4 border-t border-border pt-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                          <p className="text-[10px] font-semibold text-ink-soft">
                             Based on
                           </p>
 
@@ -266,7 +266,7 @@ export default function PatientCopilot({
           )}
 
           {error && (
-            <div className="mx-5 mb-4 rounded-xl bg-gold-tint p-4 text-sm leading-6 text-navy-deep sm:mx-6">
+            <div className="mx-5 mb-4 rounded-xl bg-sun-tint p-4 text-sm leading-6 text-pine-deep sm:mx-6">
               {error}
             </div>
           )}
@@ -276,7 +276,7 @@ export default function PatientCopilot({
             className="border-t border-border p-4 sm:p-5"
           >
             <div className="flex items-end gap-2">
-              <div className="flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-border bg-surface-soft px-3 transition focus-within:border-navy focus-within:bg-white">
+              <div className="flex min-h-11 flex-1 items-center gap-2 rounded-xl border border-border bg-surface-soft px-3 transition focus-within:border-pine focus-within:bg-white">
                 <MessageCircle className="h-4 w-4 shrink-0 text-ink-soft" />
 
                 <textarea
@@ -300,7 +300,7 @@ export default function PatientCopilot({
               <button
                 type="submit"
                 disabled={isLoading || !question.trim()}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-navy text-white transition hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pine text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Ask Compass Copilot"
               >
                 {isLoading ? (

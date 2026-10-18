@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { ChoiceQuestion } from "@/components/ui/ChoiceQuestion";
+
 import { submitMyCheckIn } from "@/lib/patient-api";
 
 import type {
@@ -140,21 +142,21 @@ export function CheckInForm({
               Thank you.
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-ink-soft">
+            <p className="mt-2 text-base leading-6 text-ink-soft">
               Your care navigation team can now
               see your update.
             </p>
 
             {transportStatus !==
               "confirmed" && (
-              <p className="mt-3 text-sm font-medium text-navy">
+              <p className="mt-3 text-base font-medium text-pine">
                 We noticed you may need help
                 with transportation.
               </p>
             )}
 
             {requestedHelp && (
-              <p className="mt-2 text-sm font-medium text-navy">
+              <p className="mt-2 text-base font-medium text-pine">
                 Your request for navigator
                 support was included.
               </p>
@@ -166,27 +168,21 @@ export function CheckInForm({
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
+    <section className="rounded-[14px] border border-border bg-white p-5 shadow-[0_1px_0_rgb(23_80_79/0.06)] sm:p-8">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-          Today&apos;s check-in
-        </p>
-
-        <h2 className="mt-2 text-xl font-semibold text-navy-deep">
+        <h2 className="text-[1.5rem] font-bold leading-tight text-pine-deep">
           How are you feeling today?
         </h2>
 
-        <p className="mt-2 text-sm leading-6 text-ink-soft">
-          This takes about a minute and
-          helps your care navigation team
-          understand where you may need
-          support.
+        <p className="mt-2 text-base leading-6 text-ink-soft">
+          A few quick questions. Your answers go straight to your
+          care team so they can help early.
         </p>
       </div>
 
       <div className="mt-7 space-y-8">
         <Question
-          title="How severe are your symptoms today?"
+          title="How are your symptoms today?"
           options={[
             {
               label: "None",
@@ -232,7 +228,7 @@ export function CheckInForm({
         />
 
         <Question
-          title="Do you have transportation for your next appointment?"
+          title="Do you have a ride to your next visit?"
           options={[
             {
               label: "Yes",
@@ -268,7 +264,7 @@ export function CheckInForm({
         />
 
         <Question
-          title="Are you able to take your medications as planned?"
+          title="Can you get and take your medicines?"
           options={[
             {
               label: "Yes",
@@ -295,7 +291,7 @@ export function CheckInForm({
         />
 
         <YesNoQuestion
-          title="Are costs or financial concerns making care harder right now?"
+          title="Are money or insurance worries making care harder?"
           value={financialConcern}
           onChange={
             setFinancialConcern
@@ -303,7 +299,7 @@ export function CheckInForm({
         />
 
         <YesNoQuestion
-          title="Would you like your navigator to contact you for help?"
+          title="Would you like your navigator to call you?"
           value={requestedHelp}
           onChange={
             setRequestedHelp
@@ -313,7 +309,7 @@ export function CheckInForm({
         <div>
           <label
             htmlFor="note"
-            className="block text-sm font-semibold text-ink"
+            className="block text-base font-semibold text-ink"
           >
             Anything else you&apos;d like
             your navigator to know?
@@ -340,18 +336,18 @@ export function CheckInForm({
               bg-white
               px-4
               py-3
-              text-sm
+              text-base
               text-ink
               outline-none
               transition
               placeholder:text-ink-soft/50
-              focus:border-navy
+              focus:border-pine
               focus:ring-2
-              focus:ring-navy/10
+              focus:ring-pine/10
             "
           />
 
-          <p className="mt-2 text-right text-xs text-ink-soft">
+          <p className="mt-2 text-right text-sm text-ink-soft">
             {note.length} / 3000
           </p>
         </div>
@@ -361,7 +357,7 @@ export function CheckInForm({
         <div className="mt-6 flex items-start gap-2 rounded-xl bg-priority-high-tint p-4">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-priority-high" />
 
-          <p className="text-sm text-priority-high">
+          <p className="text-base text-priority-high">
             {error}
           </p>
         </div>
@@ -381,17 +377,17 @@ export function CheckInForm({
           justify-center
           gap-2
           rounded-xl
-          bg-navy
+          bg-pine
           px-5
           py-3.5
-          text-sm
+          text-base
           font-semibold
           text-white
           transition
-          hover:bg-navy-deep
+          hover:bg-pine-deep
           focus:outline-none
           focus-visible:ring-2
-          focus-visible:ring-gold
+          focus-visible:ring-sun
           focus-visible:ring-offset-2
           disabled:cursor-not-allowed
           disabled:opacity-60
@@ -420,37 +416,8 @@ type QuestionProps = {
   options: QuestionOption[];
 };
 
-function Question({
-  title,
-  options,
-}: QuestionProps) {
-  return (
-    <div>
-      <p className="text-sm font-semibold text-ink">
-        {title}
-      </p>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {options.map((option) => (
-          <button
-            key={option.label}
-            type="button"
-            onClick={
-              option.onClick
-            }
-            className={[
-              "rounded-full border px-4 py-2.5 text-sm font-medium transition",
-              option.active
-                ? "border-navy bg-navy text-white"
-                : "border-border bg-surface-soft text-ink-soft hover:border-navy/30 hover:text-navy",
-            ].join(" ")}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+function Question(props: QuestionProps) {
+  return <ChoiceQuestion {...props} />;
 }
 
 function YesNoQuestion({

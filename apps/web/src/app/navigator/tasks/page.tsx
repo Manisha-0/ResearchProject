@@ -155,11 +155,7 @@ export default function NavigatorTasksPage() {
       <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-gold">
-              NAVIGATOR WORK QUEUE
-            </p>
-
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy-deep sm:text-4xl">
+            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-pine-deep sm:text-4xl">
               Coordination work across patients
             </h1>
 
@@ -171,7 +167,7 @@ export default function NavigatorTasksPage() {
 
           <Link
             href="/navigator"
-            className="inline-flex items-center gap-2 self-start rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-navy transition hover:border-navy/30 hover:bg-navy-tint sm:self-auto"
+            className="inline-flex items-center gap-2 self-start rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-semibold text-pine transition hover:border-pine/30 hover:bg-pine-tint sm:self-auto"
           >
             Dashboard
           </Link>
@@ -320,7 +316,7 @@ function TaskCard({ item }: { item: NavigatorTaskQueueItem }) {
           </h3>
 
           <div className="mt-2 flex items-center gap-2 text-sm text-ink-soft">
-            <UserRound className="h-4 w-4 shrink-0 text-navy" />
+            <UserRound className="h-4 w-4 shrink-0 text-pine" />
 
             <span>
               {patient_first_name} {patient_last_name}
@@ -328,7 +324,7 @@ function TaskCard({ item }: { item: NavigatorTaskQueueItem }) {
           </div>
 
           <div className="mt-4 rounded-xl bg-surface-soft p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
+            <p className="text-[11px] font-semibold text-ink-soft">
               Navigation need
             </p>
 
@@ -348,7 +344,7 @@ function TaskCard({ item }: { item: NavigatorTaskQueueItem }) {
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-priority-low" />
 
-                <p className="text-xs font-semibold uppercase tracking-wide text-priority-low">
+                <p className="text-xs font-semibold text-priority-low">
                   Resolution
                 </p>
               </div>
@@ -379,7 +375,7 @@ function TaskCard({ item }: { item: NavigatorTaskQueueItem }) {
         <div className="shrink-0">
           <Link
             href={`/navigator/patient/${task.patient_id}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="inline-flex items-center gap-2 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             {isCompleted ? "View Patient" : "Open Patient"}
 
@@ -405,11 +401,11 @@ function SummaryCard({
   return (
     <div className="rounded-2xl border border-border bg-white p-5">
       <div className="flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-tint text-navy [&>svg]:h-5 [&>svg]:w-5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pine-tint text-pine [&>svg]:h-5 [&>svg]:w-5">
           {icon}
         </div>
 
-        <span className="text-3xl font-bold tracking-tight text-navy-deep">
+        <span className="text-3xl font-bold tracking-tight text-pine-deep">
           {value}
         </span>
       </div>
@@ -438,8 +434,8 @@ function FilterButton({
       onClick={onClick}
       className={
         active
-          ? "inline-flex items-center gap-2 rounded-full bg-navy px-4 py-2 text-sm font-semibold text-white"
-          : "inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-navy/30 hover:text-navy"
+          ? "inline-flex items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-semibold text-white"
+          : "inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-pine/30 hover:text-pine"
       }
     >
       {label}
@@ -461,7 +457,7 @@ function TaskStatusBadge({ status }: { status: NavigationTaskStatus }) {
   const styles: Record<NavigationTaskStatus, string> = {
     open: "bg-surface-soft text-ink-soft",
 
-    in_progress: "bg-gold-tint text-navy-deep",
+    in_progress: "bg-sun-tint text-pine-deep",
 
     completed: "bg-priority-low-tint text-priority-low",
 
@@ -481,7 +477,7 @@ function AttentionBadge({ status }: { status: AttentionStatus }) {
   const styles: Record<AttentionStatus, string> = {
     needs_attention: "bg-priority-high-tint text-priority-high",
 
-    follow_up: "bg-gold-tint text-navy-deep",
+    follow_up: "bg-sun-tint text-pine-deep",
 
     on_track: "bg-priority-low-tint text-priority-low",
   };
@@ -516,7 +512,7 @@ function LoadingState() {
   return (
     <div className="mt-10 flex min-h-64 items-center justify-center rounded-2xl border border-border bg-white">
       <div className="text-center">
-        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-navy" />
+        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-pine" />
 
         <p className="mt-3 text-sm text-ink-soft">
           Loading navigator work queue...
@@ -548,7 +544,7 @@ function ErrorState({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="mt-4 rounded-lg bg-pine px-4 py-2 text-sm font-semibold text-white transition hover:bg-pine-deep"
           >
             Try again
           </button>

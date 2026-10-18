@@ -62,6 +62,7 @@ class AppointmentStatus(str, Enum):
 class CheckInSource(str, Enum):
     PATIENT = "patient"
     CAREGIVER = "caregiver"
+    VOICE_CALL = "voice_call"
 
 
 class NavigationSignalCategory(str, Enum):
@@ -103,3 +104,24 @@ class NavigationTaskStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+class ReminderCallChannel(str, Enum):
+    PHONE = "phone"
+    SIMULATED = "simulated"
+
+
+class ReminderCallStatus(str, Enum):
+    QUEUED = "queued"
+    RINGING = "ringing"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    ENDED_EARLY = "ended_early"
+    NO_ANSWER = "no_answer"
+    FAILED = "failed"
+
+
+class ReminderCallAnsweredBy(str, Enum):
+    PATIENT = "patient"
+    CAREGIVER = "caregiver"
+    WRONG_PERSON = "wrong_person"
+    UNKNOWN = "unknown"

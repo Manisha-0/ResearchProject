@@ -17,9 +17,9 @@ export function NavigatorAdminPanel({ patient }: { patient: Patient }) {
     <div className="space-y-6">
       <section className="rounded-2xl border border-border bg-white p-5">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-navy" />
+          <Sparkles className="h-5 w-5 text-pine" />
 
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+          <p className="text-xs font-semibold text-ochre">
             AI Admin Brief
           </p>
         </div>
@@ -45,10 +45,6 @@ export function NavigatorAdminPanel({ patient }: { patient: Patient }) {
       </section>
 
       <section className="rounded-2xl border border-border bg-white p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-          Navigator Actions
-        </p>
-
         <h2 className="mt-1 font-semibold text-ink">
           Maintain the care journey
         </h2>
@@ -57,9 +53,9 @@ export function NavigatorAdminPanel({ patient }: { patient: Patient }) {
           <button
             type="button"
             onClick={() => setAppointmentOpen(!appointmentOpen)}
-            className="flex items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:border-navy/30"
+            className="flex items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:border-pine/30"
           >
-            <Plus className="h-5 w-5 text-navy" />
+            <Plus className="h-5 w-5 text-pine" />
 
             <div>
               <p className="text-sm font-semibold text-ink">
@@ -75,9 +71,9 @@ export function NavigatorAdminPanel({ patient }: { patient: Patient }) {
           <button
             type="button"
             onClick={() => setDocumentOpen(!documentOpen)}
-            className="flex items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:border-navy/30"
+            className="flex items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:border-pine/30"
           >
-            <FilePlus2 className="h-5 w-5 text-navy" />
+            <FilePlus2 className="h-5 w-5 text-pine" />
 
             <div>
               <p className="text-sm font-semibold text-ink">
@@ -158,7 +154,7 @@ function AppointmentForm({
       <button
         type="button"
         onClick={save}
-        className="mt-4 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white"
+        className="mt-4 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white"
       >
         Add appointment
       </button>
@@ -217,7 +213,7 @@ function DocumentForm({
       <button
         type="button"
         onClick={save}
-        className="mt-4 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white"
+        className="mt-4 rounded-lg bg-pine px-4 py-2.5 text-sm font-semibold text-white"
       >
         Add and summarize
       </button>

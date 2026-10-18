@@ -6,6 +6,7 @@ import {
   Car,
   LoaderCircle,
   MapPin,
+  Phone,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -119,20 +120,10 @@ export default function PatientPage() {
     <main className="min-h-screen bg-surface-soft">
       <AppHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
-        <section>
-          <p className="text-sm text-ink-soft">Welcome back.</p>
-
-          <h1 className="mt-1 font-display text-3xl font-bold text-navy-deep">
-            My Compass
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-soft">
-            Everything Compass knows about your navigation journey is organized
-            here — what&apos;s happened, what&apos;s next, and where you may
-            need support.
-          </p>
-        </section>
+      <div className="mx-auto max-w-3xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+        <h1 className="text-[2rem] font-bold leading-tight text-pine-deep sm:text-[2.4rem]">
+          {greeting()}
+        </h1>
 
         {isLoading && <LoadingState />}
 
@@ -142,30 +133,27 @@ export default function PatientPage() {
 
         {!isLoading && !error && (
           <>
-            <NextStep
+            <NextAppointmentCard
               appointment={nextAppointment}
               latestCheckIn={latestCheckIn}
             />
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-              <div className="space-y-6">
-                <CareJourney journey={journey} />
+            <div className="mt-10 space-y-10">
+              <CheckInForm onSubmitted={setLatestCheckIn} />
 
-                <PatientDocuments />
+              <CareJourney journey={journey} />
 
-                <CaregiverAccess />
-              </div>
+              <Appointments appointments={appointments} />
 
-              <div className="space-y-6">
-                <CheckInForm onSubmitted={setLatestCheckIn} />
+              <PatientDocuments />
 
-                <Appointments appointments={appointments} />
-              </div>
+              <CaregiverAccess />
             </div>
 
-            <p className="mt-8 text-center text-xs leading-5 text-ink-soft">
-              Compass uses synthetic demo patient information and supports
-              navigation and coordination. It does not make clinical decisions.
+            <p className="mt-12 max-w-xl text-sm leading-6 text-ink-soft">
+              Compass helps you and your care team stay organized. It does not
+              give medical advice. If you feel very unwell, call your clinic or
+              911.
             </p>
           </>
         )}
@@ -174,76 +162,105 @@ export default function PatientPage() {
   );
 }
 
-function NextStep({
+function greeting() {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function NextAppointmentCard({
   appointment,
   latestCheckIn,
 }: {
   appointment: PatientAppointment | null;
-
   latestCheckIn: CheckInResponse | null;
 }) {
+  if (!appointment) {
+    return (
+      <section className="mt-6 rounded-[14px] border border-border bg-white p-6">
+        <h2 className="text-xl font-bold text-ink">No visits booked yet</h2>
+        <p className="mt-2 text-ink-soft">
+          When your care team books your next visit, it will show here.
+        </p>
+      </section>
+    );
+  }
+
+  const start = new Date(appointment.scheduled_start);
+  const place = [appointment.location_name, appointment.address_text]
+    .filter(Boolean)
+    .join(", ");
+
   return (
-    <section className="mt-8 rounded-2xl border border-border bg-white p-5 sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-        Next Step
-      </p>
+    <section
+      aria-labelledby="next-visit"
+      className="appointment-card mt-6 flex flex-col overflow-hidden sm:flex-row"
+    >
+      <div className="flex-1 py-6 pr-6">
+        <p id="next-visit" className="font-semibold">
+          Your next visit {relativeDay(start)}
+        </p>
 
-      <div className="mt-3 flex flex-col justify-between gap-5 sm:flex-row">
-        <div>
-          {appointment ? (
-            <>
-              <h2 className="text-xl font-semibold text-navy-deep">
-                {appointment.title}
-              </h2>
+        <p className="mt-2 text-[1.75rem] font-bold leading-tight sm:text-[2rem]">
+          {new Intl.DateTimeFormat("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          }).format(start)}
+          <br />
+          {new Intl.DateTimeFormat("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          }).format(start)}
+        </p>
 
-              <div className="mt-4 space-y-2 text-sm text-ink-soft">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 shrink-0 text-navy" />
+        <dl className="mt-5 space-y-2 text-[1.05rem]">
+          <div className="flex gap-3">
+            <dt className="sr-only">Visit</dt>
+            <CalendarDays aria-hidden className="mt-1 h-5 w-5 shrink-0" />
+            <dd>
+              {appointment.title}
+              {appointment.provider_name &&
+                ` with ${appointment.provider_name}`}
+            </dd>
+          </div>
 
-                  {formatDateTime(appointment.scheduled_start)}
-                </div>
-
-                {(appointment.location_name || appointment.address_text) && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
-
-                    <span>
-                      {[appointment.location_name, appointment.address_text]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <Car className="h-4 w-4 shrink-0 text-navy" />
-                  Transportation:{" "}
-                  <strong>{getTransportationLabel(latestCheckIn)}</strong>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-xl font-semibold text-navy-deep">
-                No upcoming appointment
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-ink-soft">
-                Your care navigation team has not added an upcoming appointment
-                yet.
-              </p>
-            </>
+          {place && (
+            <div className="flex gap-3">
+              <dt className="sr-only">Where</dt>
+              <MapPin aria-hidden className="mt-1 h-5 w-5 shrink-0" />
+              <dd>
+                {place}{" "}
+                <a
+                  className="whitespace-nowrap font-semibold underline underline-offset-4"
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Get directions
+                </a>
+              </dd>
+            </div>
           )}
+        </dl>
+      </div>
+
+      <div className="appointment-card-stub flex flex-col justify-center gap-4 py-6 pr-6 sm:w-64 sm:pl-6">
+        <div className="flex gap-3">
+          <Car aria-hidden className="mt-1 h-5 w-5 shrink-0" />
+          <p>
+            <span className="block font-semibold">Ride</span>
+            {getTransportationLabel(latestCheckIn)}
+          </p>
         </div>
 
-        <div className="rounded-xl bg-navy-tint p-4 sm:max-w-xs">
-          <p className="text-xs font-semibold uppercase tracking-wide text-navy">
-            Compass reminder
-          </p>
-
-          <p className="mt-2 text-sm leading-6 text-navy-deep">
-            Complete today&apos;s check-in so your navigator knows if anything
-            has changed before your next step.
+        <div className="flex gap-3">
+          <Phone aria-hidden className="mt-1 h-5 w-5 shrink-0" />
+          <p className="text-[0.95rem] leading-6">
+            We will phone you before this visit to check you are ready. A family
+            member can answer for you.
           </p>
         </div>
       </div>
@@ -251,16 +268,23 @@ function NextStep({
   );
 }
 
+function relativeDay(date: Date) {
+  const now = new Date();
+  const dayStart = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((dayStart(date) - dayStart(now)) / 86_400_000);
+
+  if (days === 0) return "is today";
+  if (days === 1) return "is tomorrow";
+  if (days > 1 && days < 7) return `is in ${days} days`;
+  return "";
+}
+
 function LoadingState() {
   return (
-    <div className="mt-8 flex min-h-64 items-center justify-center rounded-2xl border border-border bg-white">
-      <div className="text-center">
-        <LoaderCircle className="mx-auto h-6 w-6 animate-spin text-navy" />
-
-        <p className="mt-3 text-sm text-ink-soft">
-          Loading your care journey...
-        </p>
-      </div>
+    <div className="mt-6 flex min-h-48 items-center gap-3 text-ink-soft">
+      <LoaderCircle className="h-5 w-5 animate-spin text-pine" />
+      Loading your visits…
     </div>
   );
 }
@@ -273,21 +297,21 @@ function ErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="mt-8 rounded-2xl border border-border bg-white p-6">
+    <div className="mt-6 rounded-[14px] border border-priority-high/30 bg-priority-high-tint p-6">
       <div className="flex items-start gap-3">
         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-priority-high" />
 
         <div>
           <p className="font-semibold text-ink">
-            Unable to load your Compass journey
+            We could not load your information
           </p>
 
-          <p className="mt-1 text-sm text-ink-soft">{message}</p>
+          <p className="mt-1 text-ink-soft">{message}</p>
 
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-navy-deep"
+            className="mt-4 rounded-lg bg-pine px-5 py-3 font-semibold text-white transition hover:bg-pine-deep"
           >
             Try again
           </button>
@@ -325,26 +349,16 @@ function getNextAppointment(appointments: PatientAppointment[]) {
 
 function getTransportationLabel(checkIn: CheckInResponse | null) {
   if (!checkIn) {
-    return "Check in today";
+    return "Tell us in today's check-in";
   }
 
   if (checkIn.transportation_confirmed === true) {
-    return "Confirmed";
+    return "Ride is set";
   }
 
   if (checkIn.transportation_confirmed === false) {
-    return "Needs help";
+    return "Needs a ride. Your navigator can help.";
   }
 
   return "Not sure";
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(value));
 }

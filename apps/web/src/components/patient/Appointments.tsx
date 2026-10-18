@@ -27,19 +27,15 @@ export function Appointments({
   );
 
   return (
-    <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-        Appointments
-      </p>
-
-      <h2 className="mt-1 text-xl font-semibold text-navy-deep">
+    <section className="border-t border-border pt-8">
+      <h2 className="text-[1.5rem] font-bold leading-tight text-pine-deep">
         My appointments
       </h2>
 
       <div className="mt-6 space-y-3">
         {orderedAppointments.length ===
         0 ? (
-          <p className="text-sm text-ink-soft">
+          <p className="text-base text-ink-soft">
             No appointments are currently
             available.
           </p>
@@ -58,19 +54,19 @@ export function Appointments({
                       }
                     </p>
 
-                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-ink-soft">
+                    <p className="mt-1 text-sm font-medium text-ink-soft">
                       {formatStatus(
                         appointment.status,
                       )}
                     </p>
                   </div>
 
-                  <CalendarDays className="h-5 w-5 shrink-0 text-navy" />
+                  <CalendarDays className="h-5 w-5 shrink-0 text-pine" />
                 </div>
 
-                <div className="mt-4 space-y-2 text-sm text-ink-soft">
+                <div className="mt-4 space-y-2 text-base text-ink-soft">
                   <div className="flex items-center gap-2">
-                    <Clock3 className="h-4 w-4 shrink-0 text-navy" />
+                    <Clock3 className="h-4 w-4 shrink-0 text-pine" />
 
                     {formatDateTime(
                       appointment.scheduled_start,
@@ -80,7 +76,7 @@ export function Appointments({
                   {(appointment.location_name ||
                     appointment.address_text) && (
                     <div className="flex items-start gap-2">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-pine" />
 
                       <span>
                         {[
@@ -95,7 +91,7 @@ export function Appointments({
 
                   {appointment.provider_name && (
                     <div className="flex items-center gap-2">
-                      <UserRound className="h-4 w-4 shrink-0 text-navy" />
+                      <UserRound className="h-4 w-4 shrink-0 text-pine" />
 
                       {
                         appointment.provider_name
