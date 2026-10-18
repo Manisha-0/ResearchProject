@@ -1,569 +1,215 @@
-# Project Compass
+# Compass
 
-## AI-Assisted Cancer Care Navigation & Early-Intervention Platform
+**Cancer care navigation that helps patients reach their treatment, and helps navigators see who needs them first.**
 
-**DevDays Cancer Care & Prevention Challenge — in partnership with Ochsner Health**
+> Compass doesn't replace the cancer navigator. It gives every navigator a safety net.
 
-> **Compass doesn't replace the cancer navigator. It gives every navigator an intelligent safety net.**
+Compass brings together three people around one cancer care journey: the **patient**, the **caregiver** who helps them, and the **navigator** who coordinates their care. Patients and caregivers report how things are going. Compass turns those reports into a clear, explainable work queue so the navigator can act before a barrier becomes a missed treatment.
 
-Project Compass is a cancer care navigation platform designed to connect patient and caregiver signals with the care journey already managed by navigation teams.
-
-Its goal is to help care teams identify navigation barriers earlier, reduce administrative burden, and put the right problem in front of the right human at the right time.
+This project started at the **DevDays Cancer Care & Prevention Challenge** (in partnership with Ochsner Health) and is being extended as an MS thesis in Integrated Science and Technology at Southeastern Louisiana University.
 
 ---
 
-## Challenge
+## The problem
 
-Cancer patients may encounter barriers throughout diagnosis, treatment, survivorship, and supportive care, including:
+Cancer patients run into barriers throughout treatment:
 
-- Transportation difficulties
-- Treatment authorization delays
-- Medication access issues
-- Side-effect and symptom concerns
-- Complex appointment schedules
-- Difficulty understanding care plans and documents
-- Caregiver coordination
-- Financial and geographic barriers
+- No ride to the appointment
+- Trouble getting or paying for medicines
+- Side effects and symptoms between visits
+- Money and insurance worries
+- Confusing schedules and care documents
 
-These challenges can become especially significant in rural and underserved communities.
-
-At the same time, oncology navigation teams may manage large patient panels while coordinating appointments, records, authorizations, patient communication, social needs, and follow-up.
-
-Compass is designed as a coordination and prioritization layer around that existing workflow.
+Many patients, especially older, rural or low-literacy patients, are not comfortable with apps or websites. Navigators, meanwhile, manage large patient panels and often learn about a barrier only after the appointment is missed.
 
 ---
 
-# Product Vision
+## What Compass does
 
-Compass connects three people around one patient journey:
+### For patients
+- See what already happened, where they are now, and what comes next in their care journey
+- Upcoming appointments and care documents, with plain-language summaries
+- A short check-in: symptoms, ride, medicines, money worries, and "please call me"
+- After checking in, the page shows what they answered today instead of an empty form
+
+### For caregivers
+- Access only after the navigator invites them and the patient approves
+- The patient chooses what the caregiver can see and do
+- Every entry made by a caregiver is recorded as theirs
+
+### For navigators
+- A work queue that puts patients into **Needs attention**, **Follow up** or **On track**, with the reason shown
+- Patient 360: journey, appointments, documents, check-ins and open needs in one place
+- Tasks, an administrative brief, and a Copilot for record-grounded questions
+- **Reminder calls** (new): see who has treatment in the next 48 hours and whether they have been reached
+
+### For admins
+- Create navigators and manage the organization; accounts are activated by invitation link
+
+---
+
+## New: reminder calls before treatment
+
+Two days before an appointment, Compass calls the patient (or whoever answers for them) and asks the same questions as the check-in, by voice. It is designed for patients who will never open an app.
 
 ```text
-Patient
-   │
-   │ check-ins, concerns, questions
-   ▼
-Compass
-   ▲
-   │ appointments, documents, journey updates
-   │
-Navigator / Care Team
-
-Caregiver
-   │
-   └── permissioned logistics and proxy support
+Appointment within 48 hours
+        ↓
+Compass places the call
+        ↓
+Confirms who answered (patient, caregiver, or wrong person)
+        ↓
+Asks: attending? ride? medicines? symptoms 0–10? cost worries? anything else?
+        ↓
+Answers saved as a check-in  →  rules update the navigator's work queue
+        ↓
+Asked for a person?  →  transfer to the assigned navigator (clinic hours)
+                         or book a callback with an urgency level
 ```
 
-The formal care journey is maintained by the navigation team.
+There are two ways to run the call, and the navigator chooses:
 
-Patients and authorized caregivers contribute patient-reported signals.
+| | Fixed questions | AI agent |
+|---|---|---|
+| How it talks | Same questions in the same order | Natural conversation (Google Gemini with tools) |
+| Vague answers | Asks once more, then moves on | Understands "my grandson usually drives me" |
+| If something fails | — | Falls back to the fixed questions mid-call |
 
-Compass brings those sources together so a navigator can understand:
+**Safety rules enforced in code, not left to the AI:**
+- Emergencies (chest pain, trouble breathing, thoughts of self-harm) are detected *before* the AI sees the answer, and the caller is told to call 911 or 988
+- No appointment details are shared until the person's identity is confirmed
+- The AI only collects answers; the rules engine decides priority
+- Every call is saved with its full transcript, summary and outcome
 
-> **Who may need my attention today, why, and what administrative work is still outstanding?**
+Calls can be practiced in the browser (free, uses your microphone and speakers) or placed to real phones through Twilio.
 
 ---
 
-# Core Workflow
+## How priority works
 
-The prototype demonstrates this end-to-end flow:
+Priority is decided by **transparent rules**, not by AI. Each rule looks at the patient's open signals and upcoming appointments and creates a navigation need with an explanation, for example:
+
+- Treatment soon and no confirmed ride → **Needs attention**
+- Severe symptom reported → **Needs attention**
+- Medication access or financial concern → **Follow up**
+- Callback requested: urgent / today → **Needs attention**; routine → **Follow up**
+- Missed appointment → **Needs attention**
+
+The navigator always sees *why* a patient is in a group. Compass calls this navigation priority, not clinical risk. It does not diagnose or predict outcomes.
+
+---
+
+## Architecture
 
 ```text
-Navigator creates and maintains the care journey
-        ↓
-Appointments and care documents are added
-        ↓
-Patient signs in and sees what happened and what comes next
-        ↓
-Patient completes a check-in
-        ↓
-Compass detects navigation barriers
-        ↓
-Navigation Priority changes
-        ↓
-Navigator sees the patient rise in the queue
-        ↓
-Patient 360 explains why
-        ↓
-Compass Copilot and Admin Brief organize follow-up
-        ↓
-Navigator resolves a navigation barrier
-        ↓
-Priority and patient journey update
+Next.js (web)  ──►  FastAPI (Python)  ──►  PostgreSQL (Supabase)
+                        │
+                        ├── Rules engine ──► navigation needs + priority
+                        ├── Reminder calls ──► Twilio (voice) / browser practice
+                        │                └──► Gemini (AI agent, optional)
+                        ├── Copilot, document summaries
+                        ├── Supabase Storage (documents)
+                        └── Audit log, role-based access
 ```
 
-The primary demo story follows **Manisha**, a synthetic patient.
+**Tech:** Next.js 16, React 19, Tailwind CSS 4 · FastAPI, SQLAlchemy 2, Alembic · PostgreSQL on Supabase · Google Gemini (`google-genai`) · Twilio Voice
+
+**Roles:** super admin, navigator, patient, caregiver. Each signs in to their own workspace; access is enforced on the server.
 
 ---
 
-# User Roles
-
-## Patient
-
-Patients receive access to the care record created for them by the navigation team.
-
-The patient experience includes:
-
-- Upcoming appointments
-- Current stage in the care journey
-- Earlier milestones
-- Care-plan documents
-- Plain-language document summaries
-- Daily check-ins
-- Transportation reporting
-- Medication-access reporting
-- Symptom reporting
-- Free-text concerns
-
-The patient does not need to reconstruct the cancer journey from multiple disconnected systems.
-
-Compass provides one organized view of:
-
-```text
-What already happened
-        ↓
-Where I am now
-        ↓
-What happens next
-```
-
----
-
-## Caregiver
-
-Caregivers cannot independently attach themselves to a patient.
-
-The intended access flow is:
-
-```text
-Navigator creates invitation
-        ↓
-Patient approves caregiver relationship
-        ↓
-Patient selects permissions
-        ↓
-Caregiver activates Compass access
-```
-
-Permissions are scoped by category.
-
-For example, a patient may allow a caregiver to:
-
-- View appointments
-- Coordinate transportation
-- View care tasks
-- Complete check-ins on the patient's behalf
-
-while restricting:
-
-- Clinical notes
-- Navigator notes
-- Other private care information
-
-Every proxy action is designed to preserve who entered the information.
-
----
-
-## Navigator
-
-The Navigator workspace is the operational center of Compass.
-
-Navigators can:
-
-- Review the Care-Gap Dashboard
-- See patients ranked by Navigation Priority
-- Open Patient 360
-- Review recent check-ins
-- Understand why a patient was prioritized
-- Review open and resolved care gaps
-- Add appointments
-- Add patient documents
-- Maintain the care journey
-- Review AI-assisted administrative follow-up
-- Use Compass Copilot
-- Resolve navigation barriers
-
-The navigator or care team remains responsible for action and escalation.
-
----
-
-# Navigation Priority
-
-Compass deliberately separates **navigation prioritization** from AI.
-
-The current prototype uses transparent weighted rules:
-
-| Navigation signal         | Points |
-| ------------------------- | -----: |
-| Treatment within 48 hours |    +30 |
-| Transportation unresolved |    +25 |
-| Severe symptom reported   |    +20 |
-| Authorization pending     |    +15 |
-| Medication difficulty     |    +12 |
-
-Example:
-
-```text
-Treatment within 48 hours     +30
-Transportation unresolved     +25
-Severe nausea reported        +20
-Authorization pending         +15
-                              ───
-Navigation Priority            90
-```
-
-Compass calls this **Navigation Priority**, not clinical risk.
-
-It is not intended to diagnose disease, predict hospitalization, or determine treatment.
-
----
-
-# How AI Helps
-
-AI in Compass is designed primarily to reduce information and administrative burden.
-
-It is kept architecturally separate from the rules engine.
-
-## 1. Navigator Summary
-
-Compass organizes current patient signals into a concise explanation of what may require attention.
-
----
-
-## 2. Administrative Brief
-
-Compass assembles outstanding work such as:
-
-- Transportation follow-up
-- Authorization follow-up
-- Medication access
-- Appointment preparation
-- Patient-reported changes
-
-This allows the navigator to review an action-oriented brief instead of manually scanning the complete record.
-
----
-
-## 3. Compass Copilot
-
-The navigator can ask record-grounded questions such as:
-
-```text
-What needs attention today?
-
-Prepare my call with Manisha.
-
-What changed since the last check-in?
-```
-
-This version uses deterministic generation from synthetic structured data so the live demonstration remains reliable.
-
-A finalist version can replace that generation layer with an LLM/RAG service.
-
----
-
-## 4. Patient-Friendly Document Summaries
-
-When the navigation team adds a care document, Compass can create a simpler explanation for the patient.
-
-This is designed to reduce repeated administrative rewriting while helping patients understand what was added to their care record.
-
----
-
-# Safety Architecture
-
-Compass separates:
-
-```text
-Rules Engine
-    ↓
-Navigation Priority
-```
-
-from:
-
-```text
-Patient Record
-    ↓
-AI Summary / Copilot / Administrative Assistance
-```
-
-AI explains and organizes.
-
-AI does **not** determine Navigation Priority.
-
-Humans remain responsible for clinical and navigation decisions.
-
----
-
-# Prototype Architecture
-
-The prototype intentionally prioritizes the complete product workflow over production infrastructure.
-
-```text
-Next.js / React
-      │
-      ▼
-Patient │ Caregiver │ Navigator
-      │
-      ▼
-Zustand Application Store
-      │
-      ▼
-Browser Persistence
-      │
-      ├───────────────┐
-      ▼               ▼
-Rules Engine     AI Prototype Layer
-      │               │
-      ▼               ▼
-Navigation        Summaries /
-Priority          Copilot /
-                  Admin Brief
-```
-
-All data in the prototype is synthetic.
-
----
-
-# Target Finalist Architecture
-
-If selected for the final round:
-
-```text
-Next.js PWA
-     │
-     ▼
-FastAPI
-     │
-     ├──────────────┐
-     ▼              ▼
-PostgreSQL     Rules Engine
-     │
-     ├──────────────┐
-     ▼              ▼
-Audit / RBAC    LLM + RAG
-     │              │
-     └──────┬───────┘
-            ▼
-        Navigator
-```
-
-Planned finalist work includes:
-
-- PostgreSQL persistence
-- FastAPI backend
-- Authentication and server-enforced RBAC
-- Audit logging
-- LLM/RAG integration
-- `pgvector`
-- PWA installability
-- Offline check-in queueing
-- Background synchronization
-- FHIR-compatible integration
-- Real-time dashboard updates
-- Expanded caregiver authorization workflows
-
----
-
-# Data Model
-
-The prototype models:
-
-- Patients
-- Check-ins
-- Care gaps
-- Appointments
-- Care journey milestones
-- Documents
-- Caregivers
-- Caregiver permissions
-- Navigation Priority
-- Demo sessions
-
-The schema is intentionally structured so the frontend can later connect to a real backend without redesigning the product experience.
-
----
-
-# Authentication & Role Flow
-
-The includes a simulated login experience.
-
-Users do not select another role after authentication.
-
-Their workspace is determined by their authenticated role:
-
-```text
-Patient account
-     ↓
-Patient workspace
-
-Caregiver account
-     ↓
-Caregiver workspace
-
-Navigator account
-     ↓
-Navigator workspace
-```
-
-For presentation speed, the login page includes one-click demo accounts.
-
-Manual username/password inputs remain visible to communicate the intended authentication flow.
-
-Production Compass would use health-system identity infrastructure and server-enforced authorization.
-
----
-
-# Repository Structure
-
-```text
-compass/
-├── apps/
-│   └── web/
-│       └── Next.js -> prototype
-│
-├── package.json
-└── README.md
-```
-
-The repository is intentionally structured so additional applications can be introduced later:
+## Repository structure
 
 ```text
 apps/
-├── web/
-└── api/
+├── backend/                 FastAPI service
+│   ├── app/
+│   │   ├── routers/         API endpoints (reminder_calls.py, check_ins.py, ...)
+│   │   ├── services/        rules engine, call script, AI agent, Twilio, ...
+│   │   ├── models/          database tables
+│   │   └── seed/            first admin + demo accounts
+│   ├── alembic/             database migrations
+│   ├── evaluation/          scripted vs AI caller evaluation
+│   └── tests/
+└── web/                     Next.js app
+    └── src/
+        ├── app/             pages: patient, caregiver, navigator, admin
+        └── components/
+GUIDE.md                     full setup guide, including Twilio
 ```
 
 ---
 
-# Running the Project
+## Running it locally
 
-Install dependencies:
+You need Python 3.13, Node.js 20.9+, and a PostgreSQL database (a free Supabase project works). Full step-by-step instructions, including Windows and Twilio, are in **[GUIDE.md](GUIDE.md)**.
+
+**Backend**
 
 ```bash
-npm install
+cd apps/backend
+python -m venv .venv
+.venv\Scripts\activate            # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env            # then fill in database, Gemini key, etc.
+alembic upgrade head
+python -m app.seed.bootstrap      # creates the first admin from .env
+python -m app.seed.dev_seed       # optional demo accounts (password Demo123!)
+uvicorn app.main:app --reload
 ```
 
-Start development:
+**Frontend**
 
 ```bash
+cd apps/web
+npm install
 npm run dev
 ```
 
-Open:
+Open http://localhost:3000 and sign in.
 
-```text
-http://localhost:3000
+New accounts are activated by invitation. With `EMAIL_PROVIDER=console`, the activation link is printed in the backend terminal.
+
+---
+
+## Demo flow
+
+1. **Navigator** signs in and opens the work queue and a patient's journey.
+2. **Patient** signs in, sees the journey, and checks in: severe nausea, not sure about a ride.
+3. **Navigator** sees the patient move to *Needs attention*, with the reason.
+4. **Navigator** opens *Reminder calls* and runs a practice call with the AI agent, answering as a caregiver who asks for a callback.
+5. The call record shows the transcript and summary; the callback appears in the work queue.
+6. **Navigator** resolves the ride; the patient moves back toward *On track*.
+
+---
+
+## Evaluation and tests
+
+The `evaluation/` folder runs 12 simulated calls (clear answers, vague answers, caregivers, wrong person, silence, emergencies, requests for a person) and compares the fixed-question caller with the AI agent on answer accuracy, escalation and safety.
+
+```bash
+cd apps/backend
+python -m evaluation.check_gemini                              # is the AI agent working?
+python -m evaluation.run_evaluation --modes scripted agent --pause 5
+python -m pytest tests -q                                      # unit tests
 ```
 
 ---
 
-# Recommended Demo Flow
+## Data, privacy and limits
 
-### 1. Open Compass
+- All patient data is **synthetic**. No real patient information is used.
+- This is a research prototype, not a HIPAA-compliant production system.
+- A Twilio trial account can only call verified numbers and limits call features; real deployment needs an upgraded account.
+- The AI agent has been tested with simulated callers, not real patients.
+- Navigation priority comes from explainable rules and has not been clinically validated.
 
-Start on the public product landing page.
-
-### 2. Sign in as Navigator
-
-Briefly show:
-
-- Existing care journey
-- Appointments
-- Documents
-- Administrative workflow
-
-### 3. Sign out and enter Patient account
-
-Show that Manisha sees:
-
-- Previous milestones
-- Upcoming treatment
-- Documents
-- Plain-language summaries
-
-Submit:
-
-```text
-Nausea: Severe
-Transportation: Not sure
-Medication: On track
-
-Note:
-"I'm worried I won't have a ride tomorrow."
-```
-
-### 4. Return as Navigator
-
-Manisha's Navigation Priority should rise to:
-
-```text
-90 · HIGH
-```
-
-Open Patient 360.
-
-Show:
-
-- Why she was prioritized
-- Active care gaps
-- Latest check-in
-- AI Admin Brief
-- Compass Summary
-- Copilot
-
-### 5. Resolve transportation
-
-The transportation barrier closes and Navigation Priority decreases.
-
-### 6. Return to Dashboard
-
-Show that the queue automatically reflects the updated patient state.
+Compass does **not** diagnose, recommend treatment or medication, predict hospitalization, or replace clinicians or navigators. Humans remain responsible for every care decision.
 
 ---
 
-# Synthetic Data & Compliance
+## Contributors
 
-All records shown in the prototype are synthetic.
+Built at DevDays by Anish Gyawali, Manisha Basukala and Srishti. Reminder calls, AI agent, evaluation and the redesigned interface added by Manisha Basukala as part of her MS thesis.
 
-No real patient information is used.
-
-The prototype is not represented as a HIPAA-compliant production deployment.
-
-The production architecture is designed around:
-
-- Role-based access control
-- Minimum-necessary caregiver access
-- Audit logs
-- Encryption
-- Secure authentication
-- Patient authorization
-- BAA-supported infrastructure
-- Authorized FHIR/EHR integration
-
----
-
-# Disclaimer
-
-Project Compass is a hackathon prototype.
-
-It does not:
-
-- Diagnose cancer
-- Recommend treatment
-- Recommend medication
-- Predict hospitalization
-- Replace clinicians
-- Replace navigators
-
-Navigation Priority is an explainable prototype rules engine and has not been clinically validated.
-
----
-
-# Project Compass
-
-**Help fewer patients fall through the gaps.**
-
-_Every cancer journey is different. But no patient should have to navigate the gaps alone._
-
-**Patient journey → Care gap → Early visibility → Human action → Better coordinated care**
+**Every cancer journey is different. No patient should have to navigate the gaps alone.**
