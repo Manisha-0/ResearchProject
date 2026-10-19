@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowLeft,
   CalendarDays,
+  Check,
   CheckCircle2,
   ClipboardCheck,
   Clock3,
@@ -14,7 +15,6 @@ import {
   LoaderCircle,
   Mail,
   Phone,
-  Play,
   Plus,
   ShieldCheck,
   UserRound,
@@ -36,6 +36,8 @@ import { PatientDocuments } from "@/components/navigator/PatientDocuments";
 
 import { ScheduleAppointmentDialog } from "@/components/navigator/ScheduleAppointmentDialog";
 
+import { InviteCaregiverDialog } from "@/components/navigator/InviteCaregiverDialog";
+
 import { ApiError } from "@/lib/api";
 
 import {
@@ -43,6 +45,7 @@ import {
   getPatient360,
   getPatientJourney,
   updateNavigationTask,
+  updateTaskItem,
 } from "@/lib/navigator-api";
 
 import { useAuthStore } from "@/store/auth-store";
@@ -50,6 +53,8 @@ import { useAuthStore } from "@/store/auth-store";
 import type {
   AttentionStatus,
   JourneyTimelineItem,
+  NavigationTaskItem,
+  Patient360Caregiver,
   NavigationTaskStatus,
   Patient360CheckIn,
   Patient360Need,
@@ -79,6 +84,8 @@ export default function PatientDetailPage() {
 
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+
   const [completingTask, setCompletingTask] = useState<Patient360Task | null>(
     null,
   );
@@ -88,6 +95,14 @@ export default function PatientDetailPage() {
   const [completionError, setCompletionError] = useState<string | null>(null);
 
   const [showScheduleAppointment, setShowScheduleAppointment] = useState(false);
+
+  // null: closed; "new": invite form; otherwise the waiting
+  // caregiver whose consent is being recorded.
+  const [caregiverDialog, setCaregiverDialog] = useState<
+    "new" | Patient360Caregiver | null
+  >(null);
+
+  const [caregiverNotice, setCaregiverNotice] = useState<string | null>(null);
 
   const [showAddJourneyItem, setShowAddJourneyItem] = useState(false);
 
@@ -192,25 +207,31 @@ export default function PatientDetailPage() {
     }
   }
 
-  async function handleStartTask(task: Patient360Task) {
+  async function handleToggleItem(
+    task: Patient360Task,
+    item: NavigationTaskItem,
+  ) {
     if (!patient) {
       return;
     }
 
-    setUpdatingTaskId(task.task_id);
+    setUpdatingItemId(item.item_id);
 
     setError(null);
 
     try {
-      await updateNavigationTask(patient.profile.patient_id, task.task_id, {
-        status: "in_progress",
-      });
+      await updateTaskItem(
+        patient.profile.patient_id,
+        task.task_id,
+        item.item_id,
+        !item.done,
+      );
 
       await loadPatient();
     } catch (caughtError) {
       handleRequestError(caughtError);
     } finally {
-      setUpdatingTaskId(null);
+      setUpdatingItemId(null);
     }
   }
 
@@ -346,7 +367,12 @@ export default function PatientDetailPage() {
 
                 <RecentCheckIns patient={patient} />
 
-                <Caregivers patient={patient} />
+                <Caregivers
+                  patient={patient}
+                  notice={caregiverNotice}
+                  onInvite={() => setCaregiverDialog("new")}
+                  onRecordConsent={(caregiver) => setCaregiverDialog(caregiver)}
+                />
               </div>
 
               <aside className="space-y-6">
@@ -358,7 +384,8 @@ export default function PatientDetailPage() {
                 <ActiveTasks
                   patient={patient}
                   updatingTaskId={updatingTaskId}
-                  onStart={handleStartTask}
+                  updatingItemId={updatingItemId}
+                  onToggleItem={handleToggleItem}
                   onComplete={openCompletion}
                 />
 
@@ -386,6 +413,22 @@ export default function PatientDetailPage() {
           onResolutionNoteChange={setResolutionNote}
           onClose={closeCompletion}
           onSubmit={() => void handleCompleteTask()}
+        />
+      )}
+
+      {patient && caregiverDialog && (
+        <InviteCaregiverDialog
+          patientId={patient.profile.patient_id}
+          patientName={`${patient.profile.first_name} ${patient.profile.last_name}`}
+          waiting={caregiverDialog === "new" ? undefined : caregiverDialog}
+          onClose={() => setCaregiverDialog(null)}
+          onDone={(message) => {
+            setCaregiverDialog(null);
+
+            setCaregiverNotice(message);
+
+            void loadPatient();
+          }}
         />
       )}
 
@@ -505,8 +548,20 @@ function NavigationNeeds({
 
   onCreateTask: (need: Patient360Need) => Promise<void>;
 }) {
+  // A need is covered by its own task, or by a line on the
+  // patient's follow-up checklist.
   const taskByNeed = useMemo(() => {
-    return new Map(activeTasks.map((task) => [task.navigation_need_id, task]));
+    const map = new Map<string, Patient360Task>();
+    for (const task of activeTasks) {
+      if (task.kind === "follow_up") {
+        for (const item of task.items) {
+          map.set(item.navigation_need_id, task);
+        }
+      } else {
+        map.set(task.navigation_need_id, task);
+      }
+    }
+    return map;
   }, [activeTasks]);
 
   return (
@@ -516,7 +571,8 @@ function NavigationNeeds({
       </h2>
 
       <p className="mt-2 text-sm leading-6 text-ink-soft">
-        Convert an open navigation need into trackable navigator work.
+        Compass gathers open needs into one follow-up task for this
+        patient&apos;s navigator, so they can be handled on one call.
       </p>
 
       <div className="mt-5 space-y-4">
@@ -575,7 +631,9 @@ function NavigationNeeds({
 
                   {activeTask ? (
                     <div className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-pine">
-                      Task {formatStatus(activeTask.status)}
+                      {activeTask.kind === "follow_up"
+                        ? "On follow-up checklist"
+                        : `Task ${formatStatus(activeTask.status)}`}
                     </div>
                   ) : (
                     <button
@@ -788,14 +846,20 @@ function UpcomingAppointments({
 function ActiveTasks({
   patient,
   updatingTaskId,
-  onStart,
+  updatingItemId,
+  onToggleItem,
   onComplete,
 }: {
   patient: Patient360Response;
 
   updatingTaskId: string | null;
 
-  onStart: (task: Patient360Task) => Promise<void>;
+  updatingItemId: string | null;
+
+  onToggleItem: (
+    task: Patient360Task,
+    item: NavigationTaskItem,
+  ) => Promise<void>;
 
   onComplete: (task: Patient360Task) => void;
 }) {
@@ -812,11 +876,14 @@ function ActiveTasks({
       <div className="mt-5 space-y-3">
         {patient.active_tasks.length === 0 ? (
           <p className="text-sm leading-6 text-ink-soft">
-            No active navigation tasks. Create one from an open navigation need.
+            Nothing to follow up. When a check-in or call raises a need,
+            Compass adds it to a follow-up task here.
           </p>
         ) : (
           patient.active_tasks.map((task) => {
             const isUpdating = updatingTaskId === task.task_id;
+
+            const doneCount = task.items.filter((item) => item.done).length;
 
             return (
               <div
@@ -842,23 +909,58 @@ function ActiveTasks({
                   </p>
                 )}
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {task.status === "open" && (
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() => void onStart(task)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-pine transition hover:bg-pine-tint disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isUpdating ? (
-                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Play className="h-3.5 w-3.5" />
-                      )}
-                      Start task
-                    </button>
-                  )}
+                {task.kind === "follow_up" && task.items.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold text-ink-soft">
+                      {doneCount} of {task.items.length} done
+                    </p>
 
+                    <ul className="mt-2 space-y-1.5">
+                      {task.items.map((item) => {
+                        const isSaving = updatingItemId === item.item_id;
+
+                        return (
+                          <li key={item.item_id}>
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={item.done}
+                              disabled={isSaving || updatingItemId !== null}
+                              onClick={() => void onToggleItem(task, item)}
+                              className="flex w-full items-start gap-2.5 rounded-lg bg-white px-3 py-2.5 text-left text-sm transition hover:bg-pine-tint disabled:cursor-wait"
+                            >
+                              <span
+                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                  item.done
+                                    ? "border-pine bg-pine text-white"
+                                    : "border-ink-soft/50 bg-white"
+                                }`}
+                              >
+                                {isSaving ? (
+                                  <LoaderCircle className="h-3 w-3 animate-spin text-pine" />
+                                ) : (
+                                  item.done && <Check className="h-3 w-3" />
+                                )}
+                              </span>
+
+                              <span
+                                className={
+                                  item.done
+                                    ? "text-ink-soft line-through"
+                                    : "text-ink"
+                                }
+                              >
+                                {item.label}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap gap-2">
                   {(task.status === "open" ||
                     task.status === "in_progress") && (
                     <button
@@ -868,7 +970,9 @@ function ActiveTasks({
                       className="inline-flex items-center gap-2 rounded-lg bg-pine px-3 py-2 text-xs font-semibold text-white transition hover:bg-pine-deep disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      Complete
+                      {task.kind === "follow_up"
+                        ? "Finish with a note"
+                        : "Complete"}
                     </button>
                   )}
                 </div>
@@ -985,8 +1089,10 @@ function CompleteTaskDialog({
 
         <div className="p-5 sm:p-6">
           <p className="text-sm leading-6 text-ink-soft">
-            Document what was done before closing this navigation work.
-            Completing the task will resolve its linked navigation need.
+            Document what was done before closing this navigation work.{" "}
+            {task.kind === "follow_up"
+              ? "Any items not ticked yet will be marked as resolved."
+              : "Completing the task will resolve its linked navigation need."}
           </p>
 
           <label
@@ -1166,21 +1272,63 @@ function FullCheckIn({ checkIn }: { checkIn: Patient360CheckIn }) {
   );
 }
 
-function Caregivers({ patient }: { patient: Patient360Response }) {
+const CONSENT_WORDS = {
+  phone: "by phone",
+  in_person: "in person",
+  paper_form: "on a paper form",
+} as const;
+
+const CAREGIVER_STATUS_WORDS: Record<Patient360Caregiver["status"], string> = {
+  pending_patient_approval: "Waiting for patient approval",
+  invited: "Approved · activation link sent",
+  active: "Active",
+  revoked: "Access removed",
+};
+
+function Caregivers({
+  patient,
+  notice,
+  onInvite,
+  onRecordConsent,
+}: {
+  patient: Patient360Response;
+
+  notice: string | null;
+
+  onInvite: () => void;
+
+  onRecordConsent: (caregiver: Patient360Caregiver) => void;
+}) {
   return (
     <section className="rounded-2xl border border-border bg-white p-5 sm:p-6">
-      <div className="flex items-center gap-3">
-        <HeartHandshake className="h-5 w-5 text-pine" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <HeartHandshake className="h-5 w-5 text-pine" />
 
-        <div>
           <h2 className="mt-1 font-semibold text-ink">Authorized support</h2>
         </div>
+
+        <button
+          type="button"
+          onClick={onInvite}
+          className="inline-flex items-center gap-2 rounded-lg bg-pine px-3 py-2 text-xs font-semibold text-white transition hover:bg-pine-deep"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Invite caregiver
+        </button>
       </div>
+
+      {notice && (
+        <p className="mt-4 rounded-xl bg-priority-low-tint p-3 text-sm text-priority-low">
+          {notice}
+        </p>
+      )}
 
       <div className="mt-5 space-y-3">
         {patient.caregivers.length === 0 ? (
           <p className="text-sm text-ink-soft">
-            No caregiver relationship is currently available.
+            No caregiver yet. Invite one here; the patient&apos;s consent is
+            always required.
           </p>
         ) : (
           patient.caregivers.map((caregiver) => (
@@ -1193,8 +1341,27 @@ function Caregivers({ patient }: { patient: Patient360Response }) {
               </p>
 
               <p className="mt-1 text-xs text-ink-soft">
-                {caregiver.relationship} · {formatStatus(caregiver.status)}
+                {caregiver.relationship} ·{" "}
+                {CAREGIVER_STATUS_WORDS[caregiver.status]}
               </p>
+
+              {caregiver.consent_method && caregiver.approved_at && (
+                <p className="mt-1 text-xs text-ink-soft">
+                  Consent {CONSENT_WORDS[caregiver.consent_method]} from{" "}
+                  {caregiver.consent_given_by}, recorded{" "}
+                  {formatDateTime(caregiver.approved_at)}
+                </p>
+              )}
+
+              {caregiver.status === "pending_patient_approval" && (
+                <button
+                  type="button"
+                  onClick={() => onRecordConsent(caregiver)}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-pine bg-white px-3 py-2 text-xs font-semibold text-pine transition hover:bg-pine-tint"
+                >
+                  Patient agreed? Record consent
+                </button>
+              )}
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {caregiver.permissions.map((permission) => (

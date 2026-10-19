@@ -6,6 +6,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -127,6 +128,35 @@ class CaregiverPatientAccess(
         nullable=True,
     )
 
+    # Set when a navigator records the patient's consent for
+    # them (by phone, in person or on a paper form) instead of
+    # the patient approving in the app.
+    consent_method: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+
+    consent_given_by: Mapped[str | None] = mapped_column(
+        String(150),
+        nullable=True,
+    )
+
+    consent_note: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    consent_recorded_by_user_id: Mapped[uuid.UUID | None] = (
+        mapped_column(
+            UUID(as_uuid=True),
+            ForeignKey(
+                "users.id",
+                ondelete="SET NULL",
+            ),
+            nullable=True,
+        )
+    )
+
 
 class CaregiverPermission(
     UUIDPrimaryKeyMixin,
@@ -164,4 +194,4 @@ class CaregiverPermission(
             ),
             nullable=False,
         )
-    )
+    )

@@ -20,6 +20,7 @@ from app.models.attention_snapshot import AttentionSnapshot
 from app.models.navigation_need import NavigationNeed
 from app.models.navigation_need_signal import NavigationNeedSignal
 from app.models.navigation_task import NavigationTask
+from app.models.navigation_task_item import NavigationTaskItem
 from app.models.document import Document
 from app.models.reminder_call import ReminderCall
 
@@ -42,6 +43,7 @@ __all__ = [
     "NavigationNeed",
     "NavigationNeedSignal",
     "NavigationTask",
+    "NavigationTaskItem",
     "Document",
     "ReminderCall",
-]
+]

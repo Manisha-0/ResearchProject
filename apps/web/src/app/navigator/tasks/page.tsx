@@ -121,8 +121,33 @@ export default function NavigatorTasksPage() {
       ({ task }) => task.status === "completed",
     ).length;
 
+    const activeTasks = tasks.filter(
+      ({ task }) => task.status === "open" || task.status === "in_progress",
+    );
+
+    // Unticked checklist lines (a single-need task counts as one).
+    const itemsLeft = activeTasks.reduce(
+      (sum, { task }) =>
+        sum +
+        (task.items.length > 0
+          ? task.items.filter((item) => !item.done).length
+          : 1),
+      0,
+    );
+
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const dueToday = activeTasks.filter(
+      ({ task }) => task.due_at && new Date(task.due_at) <= endOfToday,
+    ).length;
+
     return {
       active: open + inProgress,
+
+      itemsLeft,
+
+      dueToday,
 
       open,
 
@@ -184,23 +209,23 @@ export default function NavigatorTasksPage() {
             <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <SummaryCard
                 icon={<ClipboardList />}
-                label="Active"
+                label="Patients to follow up"
                 value={counts.active}
-                description="Open and in progress"
+                description="One open task per patient"
               />
 
               <SummaryCard
                 icon={<Clock3 />}
-                label="Open"
-                value={counts.open}
-                description="Not started yet"
+                label="Due today"
+                value={counts.dueToday}
+                description="Including anything overdue"
               />
 
               <SummaryCard
                 icon={<ClipboardCheck />}
-                label="In Progress"
-                value={counts.inProgress}
-                description="Currently being worked"
+                label="Items to cover"
+                value={counts.itemsLeft}
+                description="Checklist lines not ticked yet"
               />
 
               <SummaryCard
@@ -219,20 +244,6 @@ export default function NavigatorTasksPage() {
                     count={counts.active}
                     active={filter === "active"}
                     onClick={() => setFilter("active")}
-                  />
-
-                  <FilterButton
-                    label="Open"
-                    count={counts.open}
-                    active={filter === "open"}
-                    onClick={() => setFilter("open")}
-                  />
-
-                  <FilterButton
-                    label="In Progress"
-                    count={counts.inProgress}
-                    active={filter === "in_progress"}
-                    onClick={() => setFilter("in_progress")}
                   />
 
                   <FilterButton
@@ -323,21 +334,53 @@ function TaskCard({ item }: { item: NavigatorTaskQueueItem }) {
             </span>
           </div>
 
-          <div className="mt-4 rounded-xl bg-surface-soft p-4">
-            <p className="text-[11px] font-semibold text-ink-soft">
-              Navigation need
-            </p>
-
-            <p className="mt-1.5 text-sm font-semibold text-ink">
-              {need_title}
-            </p>
-
-            {task.description && (
-              <p className="mt-2 text-sm leading-6 text-ink-soft">
-                {task.description}
+          {task.kind === "follow_up" && task.items.length > 0 ? (
+            <div className="mt-4 rounded-xl bg-surface-soft p-4">
+              <p className="text-[11px] font-semibold text-ink-soft">
+                Checklist · {task.items.filter((line) => line.done).length} of{" "}
+                {task.items.length} done
               </p>
-            )}
-          </div>
+
+              <ul className="mt-2 space-y-1.5">
+                {task.items.map((line) => (
+                  <li
+                    key={line.item_id}
+                    className="flex items-start gap-2 text-sm"
+                  >
+                    {line.done ? (
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-priority-low" />
+                    ) : (
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded border border-ink-soft/50 bg-white" />
+                    )}
+
+                    <span
+                      className={
+                        line.done ? "text-ink-soft line-through" : "text-ink"
+                      }
+                    >
+                      {line.label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-xl bg-surface-soft p-4">
+              <p className="text-[11px] font-semibold text-ink-soft">
+                Navigation need
+              </p>
+
+              <p className="mt-1.5 text-sm font-semibold text-ink">
+                {need_title}
+              </p>
+
+              {task.description && (
+                <p className="mt-2 text-sm leading-6 text-ink-soft">
+                  {task.description}
+                </p>
+              )}
+            </div>
+          )}
 
           {isCompleted && task.resolution_note && (
             <div className="mt-4 rounded-xl bg-priority-low-tint p-4">

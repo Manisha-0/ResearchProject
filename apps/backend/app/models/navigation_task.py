@@ -33,6 +33,16 @@ class NavigationTask(
 ):
     __tablename__ = "navigation_tasks"
 
+    # "need": one task for one need, created by a navigator.
+    # "follow_up": created by Compass; its checklist items
+    # (NavigationTaskItem) cover every open need for the patient.
+    kind: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="need",
+        server_default="need",
+    )
+
     patient_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey(
@@ -134,4 +144,4 @@ class NavigationTask(
     ] = mapped_column(
         Text,
         nullable=True,
-    )
+    )

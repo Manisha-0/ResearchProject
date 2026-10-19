@@ -295,6 +295,23 @@ export type NavigationTaskUpdateRequest = {
   resolution_note?: string | null;
 };
 
+/* One line on a follow-up task's checklist. */
+export type NavigationTaskItem = {
+  item_id: string;
+
+  navigation_need_id: string;
+
+  label: string;
+
+  done: boolean;
+
+  done_at: string | null;
+};
+
+/* "need": one task for one need. "follow_up": created by
+   Compass, with a checklist of every open need. */
+export type NavigationTaskKind = "need" | "follow_up";
+
 export type NavigationTaskResponse = {
   id: string;
 
@@ -317,6 +334,10 @@ export type NavigationTaskResponse = {
   resolution_note: string | null;
 
   created_at: string;
+
+  kind: NavigationTaskKind;
+
+  items: NavigationTaskItem[];
 };
 
 export type NavigatorTaskQueueItem = {
@@ -414,6 +435,52 @@ export type Patient360Caregiver = {
   status: CaregiverAccessStatus;
 
   permissions: CaregiverPermissionType[];
+
+  approved_at: string | null;
+
+  /* Set when the navigator recorded the patient's consent. */
+  consent_method: CaregiverConsentMethod | null;
+
+  consent_given_by: string | null;
+};
+
+export type CaregiverConsentMethod = "phone" | "in_person" | "paper_form";
+
+export type CaregiverConsent = {
+  method: CaregiverConsentMethod;
+
+  given_by: string;
+
+  note?: string;
+
+  permissions: CaregiverPermissionType[];
+};
+
+export type CaregiverInviteRequest = {
+  first_name: string;
+
+  last_name: string;
+
+  email: string;
+
+  relationship: string;
+
+  phone?: string;
+
+  /* Leave out to let the patient approve in the app. */
+  consent?: CaregiverConsent;
+};
+
+export type CaregiverInviteResponse = {
+  caregiver_user_id: string;
+
+  caregiver_access_id: string;
+
+  email: string;
+
+  relationship_status: CaregiverAccessStatus;
+
+  message: string;
 };
 
 export type Patient360Need = {
@@ -450,6 +517,10 @@ export type Patient360Task = {
   completed_at: string | null;
 
   resolution_note: string | null;
+
+  kind: NavigationTaskKind;
+
+  items: NavigationTaskItem[];
 };
 
 export type Patient360Resolution = {
@@ -490,4 +561,4 @@ export type Patient360Response = {
   active_tasks: Patient360Task[];
 
   recent_resolutions: Patient360Resolution[];
-};
+};

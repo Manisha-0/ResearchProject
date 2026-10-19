@@ -1,6 +1,5 @@
 from typing import Annotated
 import uuid
-from datetime import datetime, timezone
 from fastapi import (
     APIRouter,
     Depends,
@@ -31,6 +30,7 @@ from app.schemas.navigation_signal import (
 )
 from app.services.context_engine import (
     evaluate_and_snapshot_patient,
+    resolve_need,
 )
 from app.services.permissions import (
     get_patient_for_navigator,
@@ -298,12 +298,10 @@ def resolve_navigation_need(
             detail="Navigation need not found.",
         )
 
-    need.status = (
-        NavigationNeedStatus.RESOLVED
-    )
-
-    need.resolved_at = datetime.now(
-        timezone.utc
+    resolve_need(db, need)
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient.id,
     )
 
     write_audit_log(
@@ -327,4 +325,4 @@ def resolve_navigation_need(
         "message": (
             "Navigation need resolved."
         )
-    }
+    }

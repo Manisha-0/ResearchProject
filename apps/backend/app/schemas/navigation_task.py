@@ -26,6 +26,18 @@ class NavigationTaskCreateRequest(BaseModel):
     due_at: datetime | None = None
 
 
+class NavigationTaskItemResponse(BaseModel):
+    item_id: uuid.UUID
+    navigation_need_id: uuid.UUID
+    label: str
+    done: bool
+    done_at: datetime | None
+
+
+class NavigationTaskItemUpdateRequest(BaseModel):
+    done: bool
+
+
 class NavigationTaskResponse(BaseModel):
     id: uuid.UUID
     patient_id: uuid.UUID
@@ -44,6 +56,10 @@ class NavigationTaskResponse(BaseModel):
 
     created_at: datetime
 
+    # "need" (one need) or "follow_up" (checklist of needs).
+    kind: str = "need"
+    items: list[NavigationTaskItemResponse] = []
+
 
 class NavigationTaskUpdateRequest(BaseModel):
     status: NavigationTaskStatus
@@ -61,4 +77,4 @@ class NavigatorTaskQueueResponse(BaseModel):
     patient_last_name: str
 
     need_title: str
-    attention_status: AttentionStatus
+    attention_status: AttentionStatus

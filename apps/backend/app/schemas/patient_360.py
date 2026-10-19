@@ -11,6 +11,7 @@ from app.models.enums import (
     NavigationNeedStatus,
     NavigationTaskStatus,
 )
+from app.schemas.navigation_task import NavigationTaskItemResponse
 
 
 class Patient360ProfileResponse(BaseModel):
@@ -74,6 +75,11 @@ class Patient360CaregiverResponse(BaseModel):
 
     permissions: list[CaregiverPermissionType]
 
+    approved_at: datetime | None = None
+    # Set when the navigator recorded the patient's consent.
+    consent_method: str | None = None
+    consent_given_by: str | None = None
+
 
 class Patient360NeedResponse(BaseModel):
     need_id: uuid.UUID
@@ -103,6 +109,9 @@ class Patient360TaskResponse(BaseModel):
     completed_at: datetime | None
 
     resolution_note: str | None
+
+    kind: str = "need"
+    items: list[NavigationTaskItemResponse] = []
 
 
 class Patient360ResolutionResponse(BaseModel):
@@ -149,4 +158,4 @@ class Patient360Response(BaseModel):
 
     recent_resolutions: list[
         Patient360ResolutionResponse
-    ]
+    ]

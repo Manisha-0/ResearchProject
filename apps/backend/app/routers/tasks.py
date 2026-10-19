@@ -24,9 +24,13 @@ from app.models.navigation_need import (
 from app.models.navigation_task import (
     NavigationTask,
 )
+from app.models.navigation_task_item import (
+    NavigationTaskItem,
+)
 from app.models.user import User
 from app.schemas.navigation_task import (
     NavigationTaskCreateRequest,
+    NavigationTaskItemUpdateRequest,
     NavigationTaskResponse,
     NavigationTaskUpdateRequest,
 )
@@ -35,11 +39,19 @@ from app.services.audit_service import (
 )
 from app.services.context_engine import (
     evaluate_and_snapshot_patient,
+    resolve_need,
 )
 from app.services.permissions import (
     get_patient_for_navigator,
 )
+from app.services.follow_up_service import (
+    FOLLOW_UP,
+    complete_follow_up,
+    set_item_done,
+    sync_follow_up_task,
+)
 from app.services.task_service import (
+    build_task_response,
     get_active_task_for_need,
 )
 
@@ -112,8 +124,8 @@ def create_navigation_task(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "An active task already exists "
-                "for this navigation need."
+                "This need is already on an "
+                "open task."
             ),
         )
 
@@ -166,23 +178,7 @@ def create_navigation_task(
     db.commit()
     db.refresh(task)
 
-    return NavigationTaskResponse(
-        id=task.id,
-        patient_id=task.patient_id,
-        navigation_need_id=(
-            task.navigation_need_id
-        ),
-        assigned_to_user_id=(
-            task.assigned_to_user_id
-        ),
-        title=task.title,
-        description=task.description,
-        status=task.status,
-        due_at=task.due_at,
-        completed_at=task.completed_at,
-        resolution_note=task.resolution_note,
-        created_at=task.created_at,
-    )
+    return build_task_response(db, task)
 
 @router.patch(
     "/tasks/{task_id}",
@@ -259,6 +255,41 @@ def update_navigation_task(
             ),
         )
 
+    if (
+        task.kind == FOLLOW_UP
+        and payload.status
+        == NavigationTaskStatus.COMPLETED
+    ):
+        # Finishing a follow-up resolves every item left on it.
+        complete_follow_up(
+            db,
+            task=task,
+            user_id=current_user.id,
+            note=payload.resolution_note.strip(),
+        )
+        evaluate_and_snapshot_patient(
+            db,
+            patient_id=patient.id,
+        )
+        write_audit_log(
+            db,
+            organization_id=(
+                current_user.organization_id
+            ),
+            actor_user_id=current_user.id,
+            patient_id=patient.id,
+            action="NAVIGATION_TASK_UPDATED",
+            resource_type="navigation_task",
+            resource_id=str(task.id),
+            metadata_json={
+                "status": task.status.value,
+                "kind": FOLLOW_UP,
+            },
+        )
+        db.commit()
+        db.refresh(task)
+        return build_task_response(db, task)
+
     task.status = payload.status
 
     if payload.resolution_note:
@@ -283,10 +314,12 @@ def update_navigation_task(
         )
 
         if need is not None:
-            need.status = (
-                NavigationNeedStatus.RESOLVED
-            )
-            need.resolved_at = now
+            resolve_need(db, need, at=now)
+
+        evaluate_and_snapshot_patient(
+            db,
+            patient_id=patient.id,
+        )
 
     elif (
         payload.status
@@ -316,21 +349,101 @@ def update_navigation_task(
     db.commit()
     db.refresh(task)
 
-    return NavigationTaskResponse(
-        id=task.id,
-        patient_id=task.patient_id,
-        navigation_need_id=(
-            task.navigation_need_id
+    return build_task_response(db, task)
+
+
+
+@router.patch(
+    "/tasks/{task_id}/items/{item_id}",
+    response_model=NavigationTaskResponse,
+)
+def update_navigation_task_item(
+    patient_id: uuid.UUID,
+    task_id: uuid.UUID,
+    item_id: uuid.UUID,
+    payload: NavigationTaskItemUpdateRequest,
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
+    current_user: Annotated[
+        User,
+        Depends(
+            require_roles(
+                UserRole.NAVIGATOR
+            )
         ),
-        assigned_to_user_id=(
-            task.assigned_to_user_id
-        ),
-        title=task.title,
-        description=task.description,
-        status=task.status,
-        due_at=task.due_at,
-        completed_at=task.completed_at,
-        resolution_note=task.resolution_note,
-        created_at=task.created_at,
+    ],
+) -> NavigationTaskResponse:
+    """Tick or untick one item on a follow-up checklist.
+
+    Ticking resolves that need. Ticking the last item
+    completes the follow-up task.
+    """
+
+    patient = get_patient_for_navigator(
+        db,
+        patient_id=patient_id,
+        navigator=current_user,
     )
 
+    task = db.get(NavigationTask, task_id)
+    if (
+        task is None
+        or task.patient_id != patient.id
+        or task.assigned_to_user_id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Navigation task not found.",
+        )
+
+    if task.status == NavigationTaskStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A completed task cannot be modified.",
+        )
+
+    item = db.get(NavigationTaskItem, item_id)
+    if item is None or item.task_id != task.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Checklist item not found.",
+        )
+
+    set_item_done(
+        db,
+        task=task,
+        item=item,
+        done=payload.done,
+        user_id=current_user.id,
+    )
+    sync_follow_up_task(
+        db,
+        patient_id=patient.id,
+        actor_user_id=current_user.id,
+    )
+    evaluate_and_snapshot_patient(
+        db,
+        patient_id=patient.id,
+    )
+
+    write_audit_log(
+        db,
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.id,
+        patient_id=patient.id,
+        action="NAVIGATION_TASK_ITEM_UPDATED",
+        resource_type="navigation_task",
+        resource_id=str(task.id),
+        metadata_json={
+            "item_id": str(item.id),
+            "navigation_need_id": str(item.navigation_need_id),
+            "done": payload.done,
+        },
+    )
+
+    db.commit()
+    db.refresh(task)
+
+    return build_task_response(db, task)

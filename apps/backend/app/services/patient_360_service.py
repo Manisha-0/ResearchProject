@@ -21,6 +21,8 @@ from app.models.enums import (
 from app.models.journey import CareJourneyItem
 from app.models.navigation_need import NavigationNeed
 from app.models.navigation_task import NavigationTask
+from app.services.follow_up_service import get_items
+from app.services.task_service import item_responses
 from app.models.patient import PatientProfile
 from app.models.user import User
 from app.schemas.patient_360 import (
@@ -218,8 +220,10 @@ def build_patient_360(
         .where(
             CaregiverPatientAccess.patient_id
             == patient.id,
+            # Show waiting and invited caregivers too, so the
+            # navigator can record consent or chase activation.
             CaregiverPatientAccess.status
-            == CaregiverAccessStatus.ACTIVE,
+            != CaregiverAccessStatus.REVOKED,
         )
         .order_by(
             CaregiverProfile.last_name.asc(),
@@ -257,6 +261,9 @@ def build_patient_360(
                 relationship=access.relationship,
                 status=access.status,
                 permissions=permissions,
+                approved_at=access.approved_at,
+                consent_method=access.consent_method,
+                consent_given_by=access.consent_given_by,
             )
         )
 
@@ -336,6 +343,8 @@ def build_patient_360(
             resolution_note=(
                 task.resolution_note
             ),
+            kind=task.kind,
+            items=item_responses(db, task),
         )
         for task in tasks
     ]
@@ -375,7 +384,11 @@ def build_patient_360(
             navigation_need_id=(
                 task.navigation_need_id
             ),
-            need_title=need.title,
+            need_title=(
+                ", ".join(item.label for item in get_items(db, task_id=task.id))
+                if task.kind == "follow_up"
+                else need.title
+            ),
             task_title=task.title,
             completed_at=task.completed_at,
             resolution_note=(
@@ -421,4 +434,4 @@ def build_patient_360(
         open_needs=open_needs,
         active_tasks=active_tasks,
         recent_resolutions=recent_resolutions,
-    )
+    )

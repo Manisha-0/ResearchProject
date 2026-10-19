@@ -22,8 +22,10 @@ from app.models.navigation_task import (
 from app.models.patient import PatientProfile
 from app.models.user import User
 from app.schemas.navigation_task import (
-    NavigationTaskResponse,
     NavigatorTaskQueueResponse,
+)
+from app.services.task_service import (
+    build_task_response,
 )
 
 
@@ -80,27 +82,7 @@ def list_my_tasks(
     for task, need, patient in rows:
         result.append(
             NavigatorTaskQueueResponse(
-                task=NavigationTaskResponse(
-                    id=task.id,
-                    patient_id=task.patient_id,
-                    navigation_need_id=(
-                        task.navigation_need_id
-                    ),
-                    assigned_to_user_id=(
-                        task.assigned_to_user_id
-                    ),
-                    title=task.title,
-                    description=task.description,
-                    status=task.status,
-                    due_at=task.due_at,
-                    completed_at=(
-                        task.completed_at
-                    ),
-                    resolution_note=(
-                        task.resolution_note
-                    ),
-                    created_at=task.created_at,
-                ),
+                task=build_task_response(db, task),
                 patient_first_name=(
                     patient.first_name
                 ),
@@ -130,4 +112,4 @@ def list_my_tasks(
             row.task.due_at is None,
             row.task.due_at,
         ),
-    )
+    )

@@ -509,11 +509,11 @@ def _record_check_in(
         medication_access_issue=a.get("medication") == "yes",
         financial_concern=a.get("cost") == "yes",
         # A request for a call back becomes its own signal
-        # (see _raise_callback_signal), with topic and urgency.
-        requested_help=bool(
-            state.safety_flag
-            or a.get("attendance") in ("no", "unsure")
-        ),
+        # (see _raise_callback_signal), with topic and urgency,
+        # and "not sure I can attend" becomes an attendance
+        # signal below. Only an emergency counts as a general
+        # request for help, so one answer is never counted twice.
+        requested_help=bool(state.safety_flag),
         free_text=f"Reminder call: {call.summary}"[:3000],
         submitted_for_relationship=(
             "caregiver (by phone)" if state.answered_by == "caregiver" else None
@@ -523,6 +523,28 @@ def _record_check_in(
     db.flush()
 
     generate_signals_from_check_in(db, check_in=check_in)
+
+    attendance = a.get("attendance")
+    if attendance in ("no", "unsure"):
+        who = "The caregiver" if state.answered_by == "caregiver" else "The patient"
+        create_signal_if_missing(
+            db,
+            patient_id=call.patient_id,
+            category=NavigationSignalCategory.CARE_COORDINATION,
+            signal_type="attendance_uncertain",
+            title=(
+                "Cannot attend the appointment"
+                if attendance == "no"
+                else "Not sure they can attend the appointment"
+            ),
+            description=(
+                f"{who} said on the reminder call that they "
+                + ("cannot attend." if attendance == "no" else "are not sure they can attend.")
+            ),
+            source_type=NavigationSignalSourceType.CHECK_IN,
+            source_reference=str(check_in.id),
+            observed_at=_now(),
+        )
     return check_in
 
 

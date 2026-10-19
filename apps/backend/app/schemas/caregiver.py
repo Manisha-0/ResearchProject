@@ -1,3 +1,4 @@
+from typing import Literal
 import uuid
 
 from pydantic import (
@@ -10,6 +11,27 @@ from app.models.enums import (
     CaregiverAccessStatus,
     CaregiverPermissionType,
 )
+
+
+class CaregiverConsent(BaseModel):
+    """The patient agreed, and the navigator records it for them."""
+
+    # How the patient gave consent.
+    method: Literal["phone", "in_person", "paper_form"]
+    # Who agreed, in the navigator's words, e.g. "Mary Janes (patient)".
+    given_by: str = Field(
+        min_length=1,
+        max_length=150,
+    )
+    note: str | None = Field(
+        default=None,
+        max_length=1000,
+    )
+    permissions: list[
+        CaregiverPermissionType
+    ] = Field(
+        min_length=1,
+    )
 
 
 class CaregiverInitiateRequest(BaseModel):
@@ -30,6 +52,9 @@ class CaregiverInitiateRequest(BaseModel):
         default=None,
         max_length=30,
     )
+    # Without consent the request waits for the patient to
+    # approve it in the app.
+    consent: CaregiverConsent | None = None
 
 
 class CaregiverInitiateResponse(BaseModel):
@@ -119,4 +144,4 @@ class CaregiverPermissionUpdateResponse(
 class CaregiverRevokeResponse(BaseModel):
     caregiver_access_id: uuid.UUID
     status: CaregiverAccessStatus
-    message: str
+    message: str
